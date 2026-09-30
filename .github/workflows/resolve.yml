@@ -1,0 +1,17 @@
+name: Resolve dependency lock
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: rm Cargo.lock
+      - run: cargo metadata --format-version 1 > dependency-metadata.json
+      - run: node .github/check-pins.mjs dependency-metadata.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: resolved-lock
+          path: Cargo.lock

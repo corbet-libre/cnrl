@@ -3,7 +3,11 @@ name: ci
 on:
   push:
     branches: ["**"]
+    paths: ["src/**", "tests/**", "Cargo.toml", "Cargo.lock", ".github/workflows/ci.yml", "README.md"]
   pull_request:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -19,7 +23,17 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - run: rustc --version
       - run: cargo fmt --all --check
-      - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo test
+      - run: node --test .github/check-pins.test.mjs
+      - run: cargo metadata --locked --format-version 1 > dependency-metadata.json
+      - run: node .github/check-pins.mjs dependency-metadata.json
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cargo-lock
+          path: Cargo.lock
