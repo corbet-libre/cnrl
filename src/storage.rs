@@ -4,7 +4,7 @@ use cpky::Uuid;
 use crlt::{Community, Row, Value, params};
 use tokio::sync::Mutex;
 
-use crate::{Error, Record, Result, enrol::batch, model::text};
+use crate::{Error, Record, Result, State, enrol::batch, model::text};
 
 /// Add this DDL to the service's complete crlt migration history.
 pub const SCHEMA: &str = include_str!("schema.sql");
@@ -281,8 +281,48 @@ fn validate_write(community: &str, previous: Option<&Record>, next: &Record) -> 
         if next != previous && previous.revision.checked_add(1) != Some(next.revision) {
             return Err(Error::Conflict);
         }
-    } else if next.revision != 1 {
-        return Err(Error::Conflict);
+        validate_transition(previous, next)?;
+    } else {
+        if next.revision != 1 {
+            return Err(Error::Conflict);
+        }
+        if next.state != State::Started {
+            return Err(Error::Transition);
+        }
+    }
+    Ok(())
+}
+
+fn validate_transition(previous: &Record, next: &Record) -> Result<()> {
+    if previous == next {
+        return Ok(());
+    }
+    use State::*;
+    let allowed = match (previous.state, next.state) {
+        (Started, PasskeyRegistered)
+        | (PasskeyRegistered, HandleReserved)
+        | (HandleReserved, GatesInProgress)
+        | (GatesInProgress | Lapsed, Admitted)
+        | (Admitted, Lapsed) => true,
+        (old, new) if old == new && old.is_terminal() => {
+            previous.skeleton.is_some() && next.skeleton.is_none()
+        }
+        (state, Expired) => state.is_pending(),
+        (state, Released) => !state.is_terminal(),
+        _ => false,
+    };
+    if !allowed
+        || (previous.state.is_pending()
+            && next.state.is_pending()
+            && previous.expires_day != next.expires_day)
+        || (previous.state != PasskeyRegistered
+            && next.state.is_pending()
+            && previous.skeleton != next.skeleton)
+        || (previous.state != next.state
+            && next.state.is_terminal()
+            && previous.skeleton != next.skeleton)
+    {
+        return Err(Error::Transition);
     }
     Ok(())
 }

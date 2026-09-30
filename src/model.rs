@@ -79,8 +79,7 @@ impl State {
 
 /// A trusted storage snapshot, not a client-supplied command or authorization.
 /// Serialization exists for storage implementors; never accept it from a client.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, PartialEq, Eq, Serialize)]
 pub struct Record {
     pub(crate) community: String,
     pub(crate) user: Uuid,
@@ -90,6 +89,36 @@ pub struct Record {
     pub(crate) expires_day: Option<i64>,
     // Present only while a pending claim exists or awaits cancellation.
     pub(crate) skeleton: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for Record {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> std::result::Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            community: String,
+            user: Uuid,
+            subject: String,
+            state: State,
+            revision: u64,
+            expires_day: Option<i64>,
+            skeleton: Option<String>,
+        }
+        let wire = Wire::deserialize(deserializer)?;
+        let record = Self {
+            community: wire.community,
+            user: wire.user,
+            subject: wire.subject,
+            state: wire.state,
+            revision: wire.revision,
+            expires_day: wire.expires_day,
+            skeleton: wire.skeleton,
+        };
+        record.validate().map_err(serde::de::Error::custom)?;
+        Ok(record)
+    }
 }
 
 impl fmt::Debug for Record {

@@ -99,7 +99,12 @@ async fn self_ban_releases_pending_and_cleanup_survives_reopen() {
     );
     // Simulate a process dying after cancel but before clearing cnrl's marker.
     register
-        .cancel_reservation(&released.member_id(), "member_handle")
+        .cancel_reservation(
+            &released.member_id(),
+            crgs::Handle::from_display("member_handle")
+                .unwrap()
+                .skeleton(),
+        )
         .await
         .unwrap();
     drop(register);
@@ -117,7 +122,12 @@ async fn self_ban_releases_pending_and_cleanup_survives_reopen() {
     assert_eq!(enrol.cleanup(&register, 10).await.unwrap(), 0);
     assert!(
         register
-            .is_handle_available("member_handle", date(now()))
+            .is_handle_available(
+                crgs::Handle::from_display("member_handle")
+                    .unwrap()
+                    .skeleton(),
+                date(now())
+            )
             .await
             .unwrap()
     );
@@ -214,7 +224,12 @@ async fn legal_blocks_preserve_scope_and_period_and_permanent_blocks_release() {
     assert!(!released.needs_cleanup());
     assert!(
         !register
-            .is_handle_available("member_handle", date(now()))
+            .is_handle_available(
+                crgs::Handle::from_display("member_handle")
+                    .unwrap()
+                    .skeleton(),
+                date(now())
+            )
             .await
             .unwrap()
     );

@@ -240,7 +240,7 @@ dependencies = [
 [[package]]
 name = "clbs"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/clbs?rev=2eeefb351484aadf430cd12083e0f198cde6a5b2#2eeefb351484aadf430cd12083e0f198cde6a5b2"
+source = "git+https://github.com/corbet-foss/clbs?rev=32b098c724ed6d3c7c3d9f4a7243f1032887c68c#32b098c724ed6d3c7c3d9f4a7243f1032887c68c"
 dependencies = [
  "crlt",
  "serde",
@@ -301,7 +301,7 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 [[package]]
 name = "cpky"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/cpky?rev=e0bea9b1a6425fe17b65257e747d2c4621078845#e0bea9b1a6425fe17b65257e747d2c4621078845"
+source = "git+https://github.com/corbet-foss/cpky?rev=eae28c04116642816e72efd37a35f7e13f2f255a#eae28c04116642816e72efd37a35f7e13f2f255a"
 dependencies = [
  "crlt",
  "serde",
@@ -324,7 +324,7 @@ dependencies = [
 [[package]]
 name = "crbk"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/crbk?rev=fe70dc61262a80dd7681da853acfdad290f3910c#fe70dc61262a80dd7681da853acfdad290f3910c"
+source = "git+https://github.com/corbet-foss/crbk?rev=cb93c06eba8da8a01bbc18eeba4be4844d8df52e#cb93c06eba8da8a01bbc18eeba4be4844d8df52e"
 dependencies = [
  "crlt",
  "serde",
@@ -335,8 +335,10 @@ dependencies = [
 [[package]]
 name = "crgs"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/crgs?rev=b8f58b2bce71b5af5c97524fc4d709f669c43da1#b8f58b2bce71b5af5c97524fc4d709f669c43da1"
+source = "git+https://github.com/corbet-foss/crgs?rev=f6c19af1e8f1a55e31aec58c3dbf3f4fe1074f7b#f6c19af1e8f1a55e31aec58c3dbf3f4fe1074f7b"
 dependencies = [
+ "precis-profiles",
+ "unicode-security",
  "chrono",
  "crlt",
  "thiserror 2.0.21",
@@ -1429,6 +1431,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "precis-core"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57026eb21aa532dc7d5b29ddc666e89965d145445ceac3194483c9e094b897be"
+dependencies = [
+ "precis-tools",
+ "ucd-parse",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "precis-profiles"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53ed6b19435958c029101ce63ae26e010973fcc79aaddfda5b3afa7102602ab4"
+dependencies = [
+ "precis-core",
+ "precis-tools",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "precis-tools"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ade9e98ddb189f367494f1fa0a966a8d0d38f9a3eec4aef0f5ec035a7e0963d"
+dependencies = [
+ "regex",
+ "ucd-parse",
+]
+
+[[package]]
 name = "prettyplease"
 version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1599,6 +1633,12 @@ dependencies = [
  "memchr",
  "regex-syntax",
 ]
+
+[[package]]
+name = "regex-lite"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab834c73d247e67f4fae452806d17d3c7501756d98c8808d7c9c7aa7d18f973"
 
 [[package]]
 name = "regex-syntax"
@@ -2244,6 +2284,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
+name = "ucd-parse"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c06ff81122fcbf4df4c1660b15f7e3336058e7aec14437c9f85c6b31a0f279b9"
+dependencies = [
+ "regex-lite",
+]
+
+[[package]]
 name = "uncased"
 version = "0.9.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2265,6 +2314,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
 dependencies = [
  "tinyvec",
+]
+
+[[package]]
+name = "unicode-script"
+version = "0.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "383ad40bb927465ec0ce7720e033cb4ca06912855fc35db31b5755d0de75b1ee"
+
+[[package]]
+name = "unicode-security"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e4ddba1535dd35ed8b61c52166b7155d7f4e4b8847cec6f48e71dc66d8b5e50"
+dependencies = [
+ "unicode-normalization",
+ "unicode-script",
 ]
 
 [[package]]

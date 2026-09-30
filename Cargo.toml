@@ -12,10 +12,10 @@ include = ["Cargo.toml", "src/**", "docs/**", "README.md", "LICENSE", "LICENSE.m
 
 [dependencies]
 chrono = { version = "0.4.45", default-features = false, features = ["std"] }
-clbs = { git = "https://github.com/corbet-foss/clbs", rev = "2eeefb351484aadf430cd12083e0f198cde6a5b2" }
-cpky = { git = "https://github.com/corbet-foss/cpky", rev = "e0bea9b1a6425fe17b65257e747d2c4621078845" }
-crbk = { git = "https://github.com/corbet-foss/crbk", rev = "fe70dc61262a80dd7681da853acfdad290f3910c" }
-crgs = { git = "https://github.com/corbet-foss/crgs", rev = "b8f58b2bce71b5af5c97524fc4d709f669c43da1" }
+clbs = { git = "https://github.com/corbet-foss/clbs", rev = "32b098c724ed6d3c7c3d9f4a7243f1032887c68c" }
+cpky = { git = "https://github.com/corbet-foss/cpky", rev = "eae28c04116642816e72efd37a35f7e13f2f255a" }
+crbk = { git = "https://github.com/corbet-foss/crbk", rev = "cb93c06eba8da8a01bbc18eeba4be4844d8df52e" }
+crgs = { git = "https://github.com/corbet-foss/crgs", rev = "f6c19af1e8f1a55e31aec58c3dbf3f4fe1074f7b" }
 crlt = { git = "https://github.com/corbet-foss/crlt", rev = "6b94dacd7fa04aa8847c62c6471a1fc5c0f6c9dc" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

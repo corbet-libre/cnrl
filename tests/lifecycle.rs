@@ -184,7 +184,12 @@ async fn lifecycle<S: Storage, R: crgs::Storage>(store: S, register: crgs::Regis
     assert_eq!(enrol.start(USER, SUBJECT, now()).await.unwrap(), released);
     assert!(
         !register
-            .is_handle_available("member_handle", date(now()))
+            .is_handle_available(
+                crgs::Handle::from_display("member_handle")
+                    .unwrap()
+                    .skeleton(),
+                date(now())
+            )
             .await
             .unwrap()
     );
@@ -252,7 +257,12 @@ async fn expiry<S: Storage, R: crgs::Storage>(enrol: Enrol<S>, register: crgs::R
     assert_eq!(enrol.get(USER, until - 1).await.unwrap(), gates);
     assert!(
         !register
-            .is_handle_available("member_handle", date(until - 1))
+            .is_handle_available(
+                crgs::Handle::from_display("member_handle")
+                    .unwrap()
+                    .skeleton(),
+                date(until - 1)
+            )
             .await
             .unwrap()
     );
@@ -262,7 +272,12 @@ async fn expiry<S: Storage, R: crgs::Storage>(enrol: Enrol<S>, register: crgs::R
     );
     assert!(
         register
-            .is_handle_available("member_handle", date(until))
+            .is_handle_available(
+                crgs::Handle::from_display("member_handle")
+                    .unwrap()
+                    .skeleton(),
+                date(until)
+            )
             .await
             .unwrap()
     );
@@ -283,7 +298,12 @@ async fn expiry<S: Storage, R: crgs::Storage>(enrol: Enrol<S>, register: crgs::R
     assert_eq!(enrol.cleanup(&register, 10).await.unwrap(), 0);
     assert!(
         !register
-            .is_handle_available("member_handle", date(until))
+            .is_handle_available(
+                crgs::Handle::from_display("member_handle")
+                    .unwrap()
+                    .skeleton(),
+                date(until)
+            )
             .await
             .unwrap()
     );

@@ -161,9 +161,7 @@ async fn malformed_gate_policy_and_register_inputs_never_advance() {
         match mode {
             0 => member.id = crgs::MemberId::new(b"other".to_vec()).unwrap(),
             1 => member.handle = None,
-            2 => {
-                member.handle = Some(crgs::Handle::new("another_handle", "another_handle").unwrap())
-            }
+            2 => member.handle = Some(crgs::Handle::from_display("another_handle").unwrap()),
             _ => member.lease_end = crgs::YearMonth::new(2025, 1).unwrap(),
         }
         assert!(
@@ -208,7 +206,7 @@ async fn reservations_cannot_extend_or_change_pending_claims() {
         .await
         .unwrap();
     let wrong = crgs::Reservation {
-        handle: crgs::Handle::new("other_handle", "other_handle").unwrap(),
+        handle: crgs::Handle::from_display("other_handle").unwrap(),
         ..receipt
     };
     assert_eq!(
@@ -385,4 +383,152 @@ async fn policy_cannot_report_allowed_for_an_expired_enrolment() {
         enrol.get(USER, deadline).await.unwrap().state(),
         State::Expired
     );
+}
+
+fn edited(record: &cnrl::Record, changes: serde_json::Value) -> cnrl::Record {
+    let mut wire = serde_json::to_value(record).unwrap();
+    for (key, value) in changes.as_object().unwrap() {
+        wire[key] = value.clone();
+    }
+    serde_json::from_value(wire).unwrap()
+}
+
+async fn storage_rejects_skipped_states<S: Storage + Clone>(store: S, terminal_state: &str) {
+    use serde_json::json;
+    let facade = enrol(store.clone());
+    let started = facade.start(USER, SUBJECT, now()).await.unwrap();
+    let admitted = edited(
+        &started,
+        json!({"state":"admitted", "expires_day":null, "revision":2}),
+    );
+    assert_eq!(
+        store.compare_exchange(Some(&started), &admitted).await,
+        Err(Error::Transition)
+    );
+    let changed_deadline = edited(
+        &started,
+        json!({"state":"passkey_registered", "revision":2, "expires_day":started.expires_at().unwrap()/86400+1}),
+    );
+    assert_eq!(
+        store
+            .compare_exchange(Some(&started), &changed_deadline)
+            .await,
+        Err(Error::Transition)
+    );
+    assert_eq!(store.load(USER).await.unwrap(), Some(started.clone()));
+    let passkey = edited(
+        &started,
+        json!({"state":"passkey_registered", "revision":2}),
+    );
+    store
+        .compare_exchange(Some(&started), &passkey)
+        .await
+        .unwrap();
+    store
+        .compare_exchange(Some(&started), &passkey)
+        .await
+        .unwrap();
+    let reserved = edited(
+        &passkey,
+        json!({"state":"handle_reserved", "skeleton":"checked-key", "revision":3}),
+    );
+    store
+        .compare_exchange(Some(&passkey), &reserved)
+        .await
+        .unwrap();
+    let rebound = edited(
+        &reserved,
+        json!({"state":"gates_in_progress", "skeleton":"different-key", "revision":4}),
+    );
+    assert_eq!(
+        store.compare_exchange(Some(&reserved), &rebound).await,
+        Err(Error::Transition)
+    );
+    let terminal = edited(
+        &reserved,
+        json!({"state":terminal_state, "expires_day":null, "revision":4}),
+    );
+    store
+        .compare_exchange(Some(&reserved), &terminal)
+        .await
+        .unwrap();
+    let revival = edited(&admitted, json!({"revision":5}));
+    assert_eq!(
+        store.compare_exchange(Some(&terminal), &revival).await,
+        Err(Error::Transition)
+    );
+    let cleaned = edited(&terminal, json!({"skeleton":null, "revision":5}));
+    store
+        .compare_exchange(Some(&terminal), &cleaned)
+        .await
+        .unwrap();
+    store
+        .compare_exchange(Some(&terminal), &cleaned)
+        .await
+        .unwrap();
+    assert_eq!(store.load(USER).await.unwrap(), Some(cleaned));
+    let inserted = edited(
+        &admitted,
+        json!({"user":Uuid::from_u128(2), "subject":"other", "revision":1}),
+    );
+    assert_eq!(
+        store.compare_exchange(None, &inserted).await,
+        Err(Error::Transition)
+    );
+    assert!(store.load(Uuid::from_u128(2)).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn memory_storage_enforces_transition_order() {
+    for state in ["expired", "released"] {
+        storage_rejects_skipped_states(MemoryStorage::new(COMMUNITY).unwrap(), state).await;
+    }
+}
+
+#[tokio::test]
+async fn sql_storage_enforces_transition_order() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = open(&dir.path().join("transitions.db")).await;
+    for state in ["expired", "released"] {
+        storage_rejects_skipped_states(
+            LibsqlStorage::new(&db, format!("{COMMUNITY}-{state}")).unwrap(),
+            state,
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn deserialization_establishes_safe_record_accessors() {
+    use serde_json::json;
+    let row = enrol(MemoryStorage::new(COMMUNITY).unwrap())
+        .start(USER, SUBJECT, now())
+        .await
+        .unwrap();
+    let wire = serde_json::to_value(&row).unwrap();
+    for change in [
+        json!({"subject":""}),
+        json!({"community":""}),
+        json!({"user":Uuid::nil()}),
+        json!({"expires_day":i64::MAX}),
+        json!({"expires_day":-1}),
+        json!({"expires_day":0}),
+        json!({"expires_day":null}),
+        json!({"revision":0}),
+        json!({"revision":u64::MAX}),
+        json!({"state":"admitted"}),
+        json!({"state":"handle_reserved"}),
+        json!({"skeleton":"unexpected"}),
+        json!({"unknown":true}),
+    ] {
+        let mut malformed = wire.clone();
+        for (key, value) in change.as_object().unwrap() {
+            malformed[key] = value.clone();
+        }
+        assert!(serde_json::from_value::<cnrl::Record>(malformed).is_err());
+    }
+    let round_trip: cnrl::Record = serde_json::from_value(wire).unwrap();
+    assert_eq!(round_trip.expires_at(), row.expires_at());
+    assert_eq!(round_trip.member_id(), row.member_id());
+    assert_eq!(round_trip, row);
 }

@@ -156,3 +156,10 @@ creates a new identity or changes state. Both stores test no return after expiry
 and all-passkey loss, including a different UUID, and prove views do not write.
 The pinned cpky authentication carries the actual verified credential ID; cmbr
 must recheck its current revocation before every authenticated action.
+
+Storage also enforces initial `Started` insertion, the lifecycle transition graph,
+unchanged pending deadlines and reservation skeletons, and terminal permanence.
+Terminal cleanup may only clear a retained reservation key. Deserialization
+validates record shape, identity, revision and representable expiry before any
+public accessor can be called. These checks complement the trusted service's
+receipt and authorization checks; storage snapshots remain private capabilities.

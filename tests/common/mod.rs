@@ -48,7 +48,7 @@ pub async fn open(path: &std::path::Path) -> crlt::Db {
 pub fn reservation(record: &Record) -> crgs::Reservation {
     crgs::Reservation {
         member_id: record.member_id(),
-        handle: crgs::Handle::new("member_handle", "member_handle").unwrap(),
+        handle: crgs::Handle::from_display("member_handle").unwrap(),
         expires_at: date(record.expires_at().unwrap()),
     }
 }
@@ -56,7 +56,7 @@ pub fn reservation(record: &Record) -> crgs::Reservation {
 pub fn admission(record: &Record) -> crgs::Admission {
     crgs::Admission {
         id: record.member_id(),
-        handle: crgs::Handle::new("member_handle", "member_handle").unwrap(),
+        handle: crgs::Handle::from_display("member_handle").unwrap(),
         role: crgs::Role::Member,
         lease_end: crgs::YearMonth::new(2027, 9).unwrap(),
     }
