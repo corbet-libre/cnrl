@@ -12,11 +12,11 @@ include = ["Cargo.toml", "src/**", "docs/**", "README.md", "LICENSE", "LICENSE.m
 
 [dependencies]
 chrono = { version = "0.4.45", default-features = false, features = ["std"] }
-clbs = { git = "https://github.com/corbet-foss/clbs", rev = "873f2dd7388c6d5e025a27b4c55447c4b4892a2d" }
-cpky = { git = "https://github.com/corbet-foss/cpky", rev = "5883d21b27d0cc5287d50e983505c91008b3b927" }
-crbk = { git = "https://github.com/corbet-foss/crbk", rev = "954c17762df251c1354bd9303354d82b0a81e487" }
-crgs = { git = "https://github.com/corbet-foss/crgs", rev = "e691f9266401d7af8dc0acfd02ab7553299eeb8a" }
-crlt = { git = "https://github.com/corbet-foss/crlt", rev = "80dc046d6ab53b3ea530c45bf3d7038c8b2c61b2" }
+clbs = { git = "https://github.com/corbet-foss/clbs", branch = "main" }
+ckyh = { git = "https://github.com/corbet-foss/ckyh", branch = "main" }
+crbk = { git = "https://github.com/corbet-foss/crbk", branch = "main" }
+crgs = { git = "https://github.com/corbet-foss/crgs", branch = "main" }
+crlt = { git = "https://github.com/corbet-foss/crlt", branch = "main" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

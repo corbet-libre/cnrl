@@ -1,50 +1,123 @@
 name: ci
-
-on:
-  push:
-    branches: ["**"]
-    paths: ["src/**", "tests/**", "Cargo.toml", "Cargo.lock", ".github/workflows/ci.yml", "README.md"]
-  pull_request:
-
 permissions:
   contents: read
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Resolve one fresh dependency snapshot
+      run: |-
+        cargo update
+        rustc --version > resolver.txt
+        cargo --version >> resolver.txt
+        date -u +%FT%TZ >> resolver.txt
+        sha256sum Cargo.lock >> resolver.txt
+    - uses: actions/upload-artifact@v4
+      with:
+        name: resolved-lock
+        path: |-
+          Cargo.lock
+          resolver.txt
+        retention-days: 7
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-      - run: rustc --version
-      - run: cargo fmt --all --check
-      - run: node --test .github/check-pins.test.mjs
-      - run: cargo metadata --locked --format-version 1 > dependency-metadata.json
-      - run: node .github/check-pins.mjs dependency-metadata.json
-      - run: cargo clippy --locked --all-targets -- -D warnings
-      - run: cargo test --locked
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cargo-lock
-          path: Cargo.lock
-
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
+    - uses: actions/download-artifact@v4
+      with:
+        name: resolved-lock
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+    - run: rustc --version
+    - run: cargo fmt --all --check
+    - run: node --test .github/check-pins.test.mjs
+    - run: cargo metadata --locked --format-version 1 > dependency-metadata.json
+    - run: node .github/check-pins.mjs dependency-metadata.json
+    - run: cargo clippy --locked --all-targets -- -D warnings
+    - run: cargo test --locked
+    needs:
+    - resolve
   dependency-policy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - run: python3 .github/check-first-party.py
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0
-        with:
-          tool: cargo-deny
-      - run: cargo deny --locked check advisories
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
+    - uses: actions/download-artifact@v4
+      with:
+        name: resolved-lock
+    - run: python3 .github/check-first-party.py
+    - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0
+      with:
+        tool: cargo-deny
+    - run: cargo deny --locked check advisories
+    needs:
+    - resolve
+  coverage:
+    needs:
+    - resolve
+    - check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
+    - uses: actions/download-artifact@v4
+      with:
+        name: resolved-lock
+    - uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: llvm-tools-preview
+    - uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: coverage
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-llvm-cov
+    - run: |-
+        rustc --version
+        cargo llvm-cov --version
+    - name: Measure real native round trips and failure paths
+      run: cargo llvm-cov --locked --workspace --all-features --branch --no-cfg-coverage --no-cfg-coverage-nightly
+        --ignore-filename-regex '/tests/' --json --output-path coverage.json
+    - name: Require complete line and branch coverage
+      run: python3 .github/check-coverage.py coverage.json
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage
+        path: |-
+          coverage.json
+          Cargo.lock
+          resolver.txt
+        retention-days: 7
+'on':
+  push:
+    branches:
+    - '**'
+  pull_request: null
+  workflow_dispatch: null
+env:
+  CARGO_BUILD_JOBS: 2
+  CARGO_TERM_COLOR: always

@@ -26,7 +26,7 @@ async fn optional_turso_round_trip() {
     );
     let now = 1_790_769_600;
     let row = enrol
-        .start(cpky::Uuid::from_u128(1), "test-pseudonym", now)
+        .start(ckyh::Uuid::from_u128(1), "test-pseudonym", now)
         .await
         .unwrap();
     assert_eq!(row.state(), State::Started);

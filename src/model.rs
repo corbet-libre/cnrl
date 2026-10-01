@@ -1,6 +1,6 @@
 use std::fmt;
 
-use cpky::Uuid;
+use ckyh::Uuid;
 use serde::{Deserialize, Serialize};
 
 use crate::{Error, Result};
@@ -36,7 +36,7 @@ impl Config {
 pub enum State {
     /// Registration has started with a fixed coarse deadline.
     Started,
-    /// cpky has durably registered a live passkey.
+    /// ckyh has durably registered a live passkey.
     PasskeyRegistered,
     /// crgs has reserved a handle until the pending deadline.
     HandleReserved,
@@ -134,7 +134,7 @@ impl Record {
     pub fn community(&self) -> &str {
         &self.community
     }
-    /// cpky's opaque community-local user handle; all its passkeys resume this row.
+    /// ckyh's opaque community-local user handle; all its passkeys resume this row.
     pub fn user(&self) -> Uuid {
         self.user
     }
@@ -195,8 +195,8 @@ impl Record {
 /// In-process events from trusted sibling crates. These are never deserialized.
 /// The service authenticates the caller and supplies current dependency records.
 pub enum Event<'a> {
-    /// Successful cpky registration; a revoked record is refused.
-    PasskeyRegistered(&'a cpky::StoredPasskey),
+    /// Successful ckyh registration; a revoked record is refused.
+    PasskeyRegistered(&'a ckyh::StoredPasskey),
     /// Successful crgs reservation, with exactly this enrolment's deadline.
     HandleReserved(&'a crgs::Reservation),
     /// Enter the headless lobby; safe to repeat.
@@ -218,7 +218,7 @@ pub enum Event<'a> {
     /// Verified clbs record; permanent membership blocks terminate, temporary
     /// ones lapse admission. Other actions and inactive orders are refused.
     Restriction(&'a clbs::Record),
-    /// The service confirmed that every cpky credential is lost/revoked.
+    /// The service confirmed that every ckyh credential is lost/revoked.
     /// crgs retains admitted handles through its existing release deadline.
     AllPasskeysLost,
     /// crgs has released an admitted member's handle after its retention period.

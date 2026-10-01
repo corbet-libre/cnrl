@@ -3,7 +3,7 @@ mod common;
 
 use cnrl::{Enrol, Error, Event, LibsqlStorage, MemoryStorage, State, Storage};
 use common::*;
-use cpky::Uuid;
+use ckyh::Uuid;
 
 async fn lifecycle<S: Storage, R: crgs::Storage>(store: S, register: crgs::Register<R>) {
     let enrol = enrol(store);
@@ -217,10 +217,10 @@ async fn lifecycle<S: Storage, R: crgs::Storage>(store: S, register: crgs::Regis
 }
 
 fn register_passkey(
-    server: &cpky::Passkeys<Credentials>,
+    server: &ckyh::Passkeys<Credentials>,
 ) -> (
     webauthn_authenticator_rs::softtoken::SoftToken,
-    cpky::StoredPasskey,
+    ckyh::StoredPasskey,
 ) {
     common::register(server, USER)
 }

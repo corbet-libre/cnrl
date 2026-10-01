@@ -1,5 +1,5 @@
 use chrono::Datelike;
-use cpky::Uuid;
+use ckyh::Uuid;
 
 use crate::{
     Config, Error, Event, Record, Result, State, Storage,
@@ -19,7 +19,7 @@ impl<S: Storage> Enrol<S> {
     }
 
     /// Start once. Retries return the existing row and never extend its deadline.
-    /// The service binds cpky's user UUID to the canonical community pseudonym.
+    /// The service binds ckyh's user UUID to the canonical community pseudonym.
     pub async fn start(&self, user: Uuid, subject: &str, now: i64) -> Result<Record> {
         time(now)?;
         text(subject)?;
@@ -76,9 +76,9 @@ impl<S: Storage> Enrol<S> {
         Ok(record)
     }
 
-    /// Resume after cpky has authenticated and committed its counter update.
-    /// Additional passkeys for the same cpky user resume the same lifecycle.
-    pub async fn resume(&self, auth: &cpky::Authentication, now: i64) -> Result<Record> {
+    /// Resume after ckyh has authenticated and committed its counter update.
+    /// Additional passkeys for the same ckyh user resume the same lifecycle.
+    pub async fn resume(&self, auth: &ckyh::Authentication, now: i64) -> Result<Record> {
         if auth.community() != self.storage.community() {
             return Err(Error::Scope);
         }

@@ -23,8 +23,8 @@ test('reject duplicate direct and transitive Corbet packages', () => {
   assert.throws(() => checkPins(graph(pkg('crlt'))), /duplicated/);
 });
 
-test('reject branch, tag, unqualified and abbreviated pins', () => {
-  for (const query of ['branch=main', 'tag=v1', '', `rev=${revision.slice(0, 7)}`]) {
+test('reject other branches, tags, unqualified and abbreviated revisions', () => {
+  for (const query of ['branch=develop', 'tag=v1', '', `rev=${revision.slice(0, 7)}`]) {
     const floating = `git+https://github.com/corbet-foss/csgn?${query}#${revision}`;
     assert.throws(() => checkPins(graph(pkg('csgn', floating))), /revision pin/);
   }
@@ -35,11 +35,12 @@ test('reject a resolved revision different from its pin', () => {
   assert.throws(() => checkPins(graph(pkg('csgn', mismatch))), /revision pin/);
 });
 
-test('reject floating transitive declarations even with a pinned resolution', () => {
+test('accept main declarations with a unique complete resolution', () => {
   const dependency = { source: 'git+https://github.com/corbet-foss/cpns?branch=main' };
-  assert.throws(() => checkPins(graph(
-    pkg('cgrd', source('cgrd'), [dependency]), pkg('cpns', source('cpns')),
-  )), /revision pin/);
+  checkPins(graph(
+    pkg('cgrd', source('cgrd'), [dependency]),
+    pkg('cpns', `git+https://github.com/corbet-foss/cpns?branch=main#${revision}`),
+  ));
 });
 
 test('require the crlt Git dependency', () => {

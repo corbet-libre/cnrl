@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use cnrl::{Config, Enrol, Record, Storage};
-use cpky::{CredentialID, CredentialStore, Error, StoredPasskey, Uuid};
+use ckyh::{CredentialID, CredentialStore, Error, StoredPasskey, Uuid};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -139,7 +139,7 @@ impl CredentialStore for Credentials {
     fn insert_authorized(
         &self,
         record: StoredPasskey,
-        auth: &cpky::Authentication,
+        auth: &ckyh::Authentication,
     ) -> Result<(), Error> {
         let mut rows = self.0.lock().unwrap();
         if auth.community() != record.community() || auth.member() != record.member() {
@@ -185,22 +185,22 @@ impl CredentialStore for Credentials {
     }
 }
 
-pub fn passkeys(community: &str) -> cpky::Passkeys<Credentials> {
-    cpky::Passkeys::new(
+pub fn passkeys(community: &str) -> ckyh::Passkeys<Credentials> {
+    ckyh::Passkeys::new(
         Credentials::default(),
         community,
         "members.example.org",
-        &[cpky::Url::parse(ORIGIN).unwrap()],
+        &[ckyh::Url::parse(ORIGIN).unwrap()],
     )
     .unwrap()
 }
 
-pub fn register(server: &cpky::Passkeys<Credentials>, user: Uuid) -> (SoftToken, StoredPasskey) {
+pub fn register(server: &ckyh::Passkeys<Credentials>, user: Uuid) -> (SoftToken, StoredPasskey) {
     let mut token = SoftToken::new(true).unwrap().0;
     let (challenge, pending) = server.start_registration(user).unwrap();
     let response = token
         .perform_register(
-            cpky::Url::parse(ORIGIN).unwrap(),
+            ckyh::Url::parse(ORIGIN).unwrap(),
             {
                 // SoftToken is a legacy non-resident fixture.
                 let mut options = challenge.public_key;
@@ -218,17 +218,17 @@ pub fn register(server: &cpky::Passkeys<Credentials>, user: Uuid) -> (SoftToken,
         .finish_registration(
             pending,
             &response.into(),
-            cpky::CreationMonth::new(2026, 9).unwrap(),
+            ckyh::CreationMonth::new(2026, 9).unwrap(),
         )
         .unwrap();
     (token, record)
 }
 
-pub fn login(server: &cpky::Passkeys<Credentials>, token: &mut SoftToken) -> cpky::Authentication {
+pub fn login(server: &ckyh::Passkeys<Credentials>, token: &mut SoftToken) -> ckyh::Authentication {
     let (challenge, pending) = server.start_authentication(USER).unwrap();
     let response = token
         .perform_auth(
-            cpky::Url::parse(ORIGIN).unwrap(),
+            ckyh::Url::parse(ORIGIN).unwrap(),
             challenge.public_key,
             300_000,
         )

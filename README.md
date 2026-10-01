@@ -13,12 +13,12 @@ only. Interfaces may change. [Implemented contract](docs/CONTRACT.md).
 
 ```rust
 use cnrl::{Config, Enrol, MemoryStorage, State};
-use cpky::Uuid;
+use ckyh::Uuid;
 
 # async fn example() -> cnrl::Result<()> {
 let enrol = Enrol::new(MemoryStorage::new("example-community")?,
     Config::new(2, "membership")?);
-// The authenticated service binds this cpky user handle to the pseudonym.
+// The authenticated service binds this ckyh user handle to the pseudonym.
 let row = enrol.start(Uuid::from_u128(1), "community-pseudonym", 1_790_769_600).await?;
 assert_eq!(row.state(), State::Started);
 assert_eq!(enrol.get(row.user(), 1_790_769_600).await?, row);
@@ -28,7 +28,7 @@ assert_eq!(enrol.get(row.user(), 1_790_769_600).await?, row);
 
 The pending duration is an explicit platform setting in whole UTC days; there
 is no product default. Every pending step retains the original deadline.
-Passkeys remain in cpky; handles, roles and leases remain in crgs; gate evidence
+Passkeys remain in ckyh; handles, roles and leases remain in crgs; gate evidence
 and decisions are transient inputs from crbk. No gate metadata, raw evidence,
 credentials, login times, activity logs or state history are persisted here.
 
@@ -48,7 +48,7 @@ Surveyed crates.io and upstream GitHub sources on 2026-09-30 before implementati
 | [smlang](https://crates.io/crates/smlang), [upstream](https://github.com/korken89/smlang-rs) (MIT/Apache-2.0) | State-machine DSL candidate. Generated guards/actions would still require all persistence, replay and dependency-boundary rules here, adding an unnecessary macro layer. |
 | [crlt](https://github.com/corbet-foss/crlt) | Selected pinned Git dependency from main; scoped transactions, migrations and index enforcement are ready. Delegates SQL, pooling and TLS to established libraries. |
 | [libsql](https://github.com/tursodatabase/libsql) (MIT) | Official driver used through crlt. No direct-driver fallback is needed. |
-| [cpky](https://github.com/corbet-foss/cpky), [crgs](https://github.com/corbet-foss/crgs), [crbk](https://github.com/corbet-foss/crbk), [clbs](https://github.com/corbet-foss/clbs) | Selected pinned Git revisions already on main. Reuse their verified passkey/authorization records, reservations/member records, gate/decision types and verified restrictions. Do not duplicate their logic. All have the same LGPL linking exception. |
+| [ckyh](https://github.com/corbet-foss/ckyh), [crgs](https://github.com/corbet-foss/crgs), [crbk](https://github.com/corbet-foss/crbk), [clbs](https://github.com/corbet-foss/clbs) | Selected pinned Git revisions already on main. Reuse their verified passkey/authorization records, reservations/member records, gate/decision types and verified restrictions. Do not duplicate their logic. All have the same LGPL linking exception. |
 
 The exact Git revisions are in `Cargo.toml`. All siblings share one crlt revision
 and clones of one service-owned database pool.
@@ -61,7 +61,7 @@ ed25519-dalek (BSD-3-Clause) for real ceremonies and signed fixtures.
 ## Integration boundaries
 
 Events are trusted in-process receipts, not HTTP commands. The service must
-bind the authenticated cpky UUID to a canonical text pseudonym (the UTF-8 bytes
+bind the authenticated ckyh UUID to a canonical text pseudonym (the UTF-8 bytes
 are its crgs ID), verify global proof binding, authenticate snapshots, check
 clbs before every action, and supply a trusted current clock. Retrying the same
 snapshot and event is safe; a revision conflict requires reloading and obtaining
@@ -89,3 +89,9 @@ publish this crate to a registry.
 ## License
 
 Copyright 2026 Julian Y. Richard Corbet. Licensed under [LGPL-3.0-only](LICENSES/LGPL-3.0-only.txt) [WITH LGPL-3.0-linking-exception](LICENSES/LGPL-3.0-linking-exception.txt). See [LICENSE.md](LICENSE.md).
+
+## Continuous verification
+
+Dependency updates follow main and are tested against one CI-resolved lockfile.
+Line and branch coverage target 100%; failures remain blocking. See
+[the coverage contract](docs/COVERAGE.md) for measurement and exclusions.

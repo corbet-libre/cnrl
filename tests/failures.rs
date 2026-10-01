@@ -3,7 +3,7 @@ mod common;
 
 use cnrl::{Config, Error, Event, LibsqlStorage, MemoryStorage, State, Storage};
 use common::*;
-use cpky::Uuid;
+use ckyh::Uuid;
 
 #[tokio::test]
 async fn reject_invalid_inputs_and_identity_rebinding() {

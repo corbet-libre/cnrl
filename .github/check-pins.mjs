@@ -6,10 +6,12 @@ const corbetSource = /^git\+https:\/\/github\.com\/corbet-(?:foss|libs)\//;
 function checkSource(source, resolved) {
   const url = new URL(source.slice(4));
   const revision = url.searchParams.get('rev');
-  if (!/^[a-f0-9]{40}$/.test(revision ?? '')
-      || [...url.searchParams.keys()].join() !== 'rev'
-      || (resolved && url.hash !== `#${revision}`)) {
-    throw new Error(`Expected a full, matching revision pin: ${source}`);
+  const main = url.searchParams.toString() === 'branch=main';
+  const pinned = [...url.searchParams.keys()].join() === 'rev'
+    && /^[a-f0-9]{40}$/.test(revision ?? '');
+  if ((!main && !pinned) || (resolved && (!/^#[a-f0-9]{40}$/.test(url.hash)
+      || (pinned && url.hash !== `#${revision}`)))) {
+    throw new Error(`Expected main or a matching transitive revision pin: ${source}`);
   }
 }
 
@@ -20,7 +22,7 @@ export function checkPins(metadata) {
       names.add(pkg.name);
       checkSource(pkg.source, true);
     }
-    // Inspect declarations too: a lockfile must not hide a floating dependency.
+    // Inspect upstream selectors too; each repository enforces its own main declarations.
     for (const dependency of pkg.dependencies) {
       if (corbetSource.test(dependency.source ?? '')) {
         checkSource(dependency.source, false);
@@ -37,5 +39,5 @@ export function checkPins(metadata) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   checkPins(JSON.parse(readFileSync(process.argv[2], 'utf8')));
-  console.log('Corbet dependencies resolve once each with full revision pins');
+  console.log('Corbet dependencies resolve once each to a complete source revision');
 }

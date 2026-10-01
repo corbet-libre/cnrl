@@ -11,9 +11,9 @@ The license is LGPL-3.0-only WITH LGPL-3.0-linking-exception.
 
 ## Identity and trusted inputs
 
-One row per cpky user UUID and per community pseudonym, both unique within the
+One row per ckyh user UUID and per community pseudonym, both unique within the
 community. A service-authorized binding is supplied to `start`; additional
-passkeys for the same UUID resume the same row. `resume` accepts cpky's opaque
+passkeys for the same UUID resume the same row. `resume` accepts ckyh's opaque
 `Authentication`, verifies its community, and records no authentication data.
 `get` is for trusted service orchestration, not authentication.
 
@@ -22,7 +22,7 @@ used by crbk and clbs. crgs receives the UTF-8 bytes of that exact encoding.
 The service must consistently enforce this binding across all siblings. cnrl
 does not derive, truncate, hash or otherwise invent a pseudonym mapping.
 
-`Event` has no deserializer. Passkeys must come from cpky's committed store;
+`Event` has no deserializer. Passkeys must come from ckyh's committed store;
 reservations and admissions from the same community's crgs; gate metadata and
 decisions from verified cgts/crbk inputs; restrictions from clbs's private-
 constructor `Record`. cnrl checks identities, community bindings when carried,
@@ -35,7 +35,7 @@ a caller that can manufacture a public crgs/crbk value. It is not an API server.
 |---|---|
 | First `start` | Started, revision 1, fixed coarse pending expiry |
 | Retry `start` | Existing state; never extends a deadline or revives a terminal row |
-| Live cpky passkey registered | Started → passkey registered; later stages are unchanged |
+| Live ckyh passkey registered | Started → passkey registered; later stages are unchanged |
 | crgs handle reservation | Passkey registered → handle reserved; its owner and exact deadline must match |
 | Gates started / valid gate metadata | Handle reserved → gates in progress; never grants admission |
 | crbk decision | Handle reserved → gates in progress; a negative decision makes admitted → lapsed; positive decisions alone cannot admit |
@@ -125,7 +125,7 @@ The service must give `cleanup` the register for the same community: crgs's
 current Register API exposes no community identity getter. It must serialize
 identity binding and enforce permanent bans on any attempted new identity.
 Registration throttling belongs to cthl; credential signing to csgn; lost-key
-detection to cpky/cmbr; access decisions and snapshot freshness to cvld/crbk.
+detection to ckyh/cmbr; access decisions and snapshot freshness to cvld/crbk.
 No local substitute crypto, policy engine, handle checker, WebAuthn verifier or
 legal verifier is implemented here.
 
@@ -154,7 +154,7 @@ remain explicit synchronization operations. `Storage::load_subject` reads the
 permanent subject index for cmbr's authoritative credential facts. It never
 creates a new identity or changes state. Both stores test no return after expiry
 and all-passkey loss, including a different UUID, and prove views do not write.
-The pinned cpky authentication carries the actual verified credential ID; cmbr
+The pinned ckyh authentication carries the actual verified credential ID; cmbr
 must recheck its current revocation before every authenticated action.
 
 Storage also enforces initial `Started` insertion, the lifecycle transition graph,
