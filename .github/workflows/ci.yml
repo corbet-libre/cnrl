@@ -2,8 +2,9 @@ name: ci
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci
+  cancel-in-progress: false
+  queue: max
 jobs:
   resolve:
     runs-on: ubuntu-latest
@@ -15,18 +16,21 @@ jobs:
         persist-credentials: false
     - uses: dtolnay/rust-toolchain@stable
     - name: Resolve one fresh dependency snapshot
-      run: |-
-        cargo update
+      run: 'cargo update
+
         rustc --version > resolver.txt
+
         cargo --version >> resolver.txt
+
         date -u +%FT%TZ >> resolver.txt
-        sha256sum Cargo.lock >> resolver.txt
+
+        sha256sum Cargo.lock >> resolver.txt'
     - uses: actions/upload-artifact@v4
       with:
         name: resolved-lock
-        path: |-
-          Cargo.lock
-          resolver.txt
+        path: 'Cargo.lock
+
+          resolver.txt'
         retention-days: 7
   check:
     runs-on: ubuntu-latest
@@ -52,6 +56,17 @@ jobs:
     - run: node .github/check-pins.mjs dependency-metadata.json
     - run: cargo clippy --locked --all-targets -- -D warnings
     - run: cargo test --locked
+    - name: Preserve formatting feedback
+      if: failure()
+      run: 'cargo fmt --all
+
+        git diff --binary > formatting.patch'
+    - uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: formatting-check
+        path: formatting.patch
+        retention-days: 7
     needs:
     - resolve
   dependency-policy:
@@ -92,30 +107,39 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         prefix-key: coverage
+        cache-on-failure: true
     - uses: taiki-e/install-action@v2
       with:
         tool: cargo-llvm-cov
-    - run: |-
-        rustc --version
-        cargo llvm-cov --version
+    - run: 'rustc --version
+
+        cargo llvm-cov --version'
     - name: Measure real native round trips and failure paths
       run: cargo llvm-cov --locked --workspace --all-features --branch --no-cfg-coverage --no-cfg-coverage-nightly
         --ignore-filename-regex '/tests/' --json --output-path coverage.json
-    - name: Require complete line and branch coverage
-      run: python3 .github/check-coverage.py coverage.json
+    - name: Export source counters from the same execution
+      run: cargo llvm-cov report --locked --branch --ignore-filename-regex '/tests/' --lcov --output-path
+        coverage.lcov
+    - name: Require every emitted source line and branch
+      run: 'python3 .github/check-coverage.py coverage.json || true
+
+        python3 .github/check-source-coverage.py coverage.lcov coverage.json'
     - uses: actions/upload-artifact@v4
       if: always()
       with:
         name: coverage
-        path: |-
+        path: 'coverage.lcov
+
           coverage.json
+
           Cargo.lock
-          resolver.txt
+
+          resolver.txt'
         retention-days: 7
 'on':
   push:
     branches:
-    - '**'
+    - main
   pull_request: null
   workflow_dispatch: null
 env:

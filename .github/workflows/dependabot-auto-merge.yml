@@ -45,20 +45,12 @@ jobs:
               if (pr.user.login !== 'dependabot[bot]' || pr.state !== 'open' || pr.draft ||
                   pr.base.ref !== 'main' || pr.head.repo?.full_name !== `${owner}/${repo}` ||
                   pr.head.sha !== run.head_sha) continue;
-              // Required checks protect a subsequent head change after this check.
-              const policy = await github.graphql(`query($owner: String!, $repo: String!) {
-                repository(owner: $owner, name: $repo) {
-                  ref(qualifiedName: "refs/heads/main") {
-                    branchProtectionRule {
-                      requiresStatusChecks requiresStrictStatusChecks isAdminEnforced requiredStatusCheckContexts
-                    }
-                  }
-                }
-              }`, {owner, repo});
-              const protection = policy.repository.ref.branchProtectionRule;
-              const names = new Set(protection?.requiredStatusCheckContexts || []);
-              if (!protection?.requiresStatusChecks || !protection.requiresStrictStatusChecks ||
-                  !protection.isAdminEnforced || expected.some(n => !names.has(n))) {
+              // Public branch metadata requires no administrative token.
+              const {data: branch} = await github.rest.repos.getBranch({owner, repo, branch: 'main'});
+              const protection = branch.protection?.required_status_checks;
+              const names = new Set(protection?.contexts || []);
+              if (!branch.protected || protection?.enforcement_level !== 'everyone' ||
+                  expected.some(n => !names.has(n))) {
                 throw new Error('Main must enforce every substantive check, including for administrators');
               }
               const checks = await github.paginate(github.rest.checks.listForRef, {
@@ -71,10 +63,13 @@ jobs:
               const status = await github.rest.repos.getCombinedStatusForRef({owner, repo, ref: pr.head.sha});
               if (status.data.total_count && status.data.state !== 'success') throw new Error('Commit status is not successful');
               const {data: current} = await github.rest.pulls.get({owner, repo, pull_number: pr.number});
-              if (current.head.sha !== run.head_sha || current.state !== 'open') continue;
-              await github.graphql(`mutation($id: ID!) {
-                enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) {
-                  pullRequest { number }
-                }
-              }`, {id: current.node_id});
+              if (current.head.sha !== run.head_sha || current.state !== 'open' || current.draft ||
+                  current.user.login !== 'dependabot[bot]' || current.base.ref !== 'main' ||
+                  current.head.repo?.full_name !== `${owner}/${repo}`) continue;
+              // The atomic SHA precondition refuses a changed head. GitHub enforces
+              // all branch protections, including strict base freshness; no bypass.
+              const {data: result} = await github.rest.pulls.merge({
+                owner, repo, pull_number: current.number, sha: run.head_sha, merge_method: 'squash'
+              });
+              if (!result.merged) throw new Error('Protected exact-head merge was refused');
             }

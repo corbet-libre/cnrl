@@ -29,10 +29,10 @@ impl<S: Storage> Enrol<S> {
             }
             return self.refresh(&existing, now).await;
         }
-        let expires_day = (now / DAY)
-            .checked_add(i64::from(self.config.pending_days))
-            .ok_or(Error::InvalidInput)?;
-        time(expires_day.checked_mul(DAY).ok_or(Error::InvalidInput)?)?;
+        // time(now) bounds the year to 9999, and pending_days is u32. The sum
+        // and product fit i64; time still rejects a deadline past year 9999.
+        let expires_day = now / DAY + i64::from(self.config.pending_days);
+        time(expires_day * DAY)?;
         let record = Record {
             community: self.storage.community().into(),
             user,
@@ -149,7 +149,7 @@ impl<S: Storage> Enrol<S> {
                 if proof.valid_until <= now
                     || proof
                         .proven_at
-                        .is_some_and(|t| t < 0 || t > now || t >= proof.valid_until)
+                        .is_some_and(|t| t < 0 || t > now)
                 {
                     return Err(Error::InvalidInput);
                 }

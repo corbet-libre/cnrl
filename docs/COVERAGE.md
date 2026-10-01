@@ -5,11 +5,14 @@ the existing native and wasm checks. Nightly Rust is used only for LLVM branch
 instrumentation, which currently requires it. Both jobs use the same resolved
 Cargo.lock snapshot; all build and test commands after resolution use --locked.
 
-The coverage job executes real tests with cargo-llvm-cov and retains the raw JSON
-even when the gate fails. The checker compares integer covered/total counts for
-both metrics; rounded percentages cannot pass. An empty report cannot pass.
-The report excludes integration-test harness files under tests/, not production
-code. No production source exclusions are currently approved.
+The coverage job exports raw JSON and LCOV from the same actual test execution.
+The gate requires every emitted production DA line and BRDA branch to have a
+nonzero counter, at 100% for both metrics. It cross-checks file inventories,
+summaries and emitted branch locations against the companion JSON. Missing,
+duplicate, empty or malformed evidence cannot pass. Raw JSON totals remain
+as diagnostic evidence for generic instantiations; source coverage does not
+claim every generic instantiation is covered. Both artifacts are retained on
+failure. No production source exclusions are currently approved.
 
 A failing gate is missing evidence, not permission to lower the threshold or
 change domain behavior. Add meaningful failure and round-trip tests. Document
