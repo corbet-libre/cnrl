@@ -136,6 +136,40 @@ impl CredentialStore for Credentials {
         rows.insert(key, record);
         Ok(())
     }
+    fn insert_authorized(
+        &self,
+        record: StoredPasskey,
+        auth: &cpky::Authentication,
+    ) -> Result<(), Error> {
+        let mut rows = self.0.lock().unwrap();
+        if auth.community() != record.community() || auth.member() != record.member() {
+            return Err(Error::NotFound);
+        }
+        let current = rows
+            .get(&(
+                auth.community().into(),
+                auth.credential_id().as_ref().to_vec(),
+            ))
+            .ok_or(Error::NotFound)?;
+        if current.member() != record.member()
+            || serde_json::to_value(current).unwrap()["rp_id"]
+                != serde_json::to_value(&record).unwrap()["rp_id"]
+        {
+            return Err(Error::NotFound);
+        }
+        if current.is_revoked() {
+            return Err(Error::Revoked);
+        }
+        let key = (
+            record.community().into(),
+            record.credential_id().as_ref().to_vec(),
+        );
+        if rows.contains_key(&key) {
+            return Err(Error::DuplicateCredential);
+        }
+        rows.insert(key, record);
+        Ok(())
+    }
     fn update<T>(
         &self,
         community: &str,

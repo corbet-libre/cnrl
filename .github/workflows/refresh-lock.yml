@@ -1,0 +1,27 @@
+name: Refresh dependency lock
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CARGO_HTTP_USER_AGENT: dependency-lock-ci
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: stable
+      - name: Resolve the declared revisions
+        run: |
+          cargo update --workspace
+          if [ -f fuzz/Cargo.toml ]; then cargo update --workspace --manifest-path fuzz/Cargo.toml; fi
+      - run: python3 .github/check-first-party.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: refreshed-lock
+          path: |
+            Cargo.lock
+            fuzz/Cargo.lock

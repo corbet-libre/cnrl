@@ -37,3 +37,14 @@ jobs:
         with:
           name: cargo-lock
           path: Cargo.lock
+
+  dependency-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: python3 .github/check-first-party.py
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0
+        with:
+          tool: cargo-deny
+      - run: cargo deny --locked check advisories
