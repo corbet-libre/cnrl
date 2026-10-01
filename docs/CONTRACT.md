@@ -1,6 +1,6 @@
 # cnrl implemented contract
 
-cnrl is the native community enrolment library under `cvld → cmnt → cmbr`.
+cnrl is the native community enrolment library under `cvld → cmty → cmbr`.
 Its binding lifecycle is started → passkey registered → handle reserved → gates
 in progress → admitted ⇄ lapsed → released. Pending registrations can also end
 in expired. It stores current state and a coarse expiry, never history, login

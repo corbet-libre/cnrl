@@ -13,7 +13,7 @@ include = ["Cargo.toml", "src/**", "docs/**", "README.md", "LICENSE", "LICENSE.m
 [dependencies]
 chrono = { version = "0.4.45", default-features = false, features = ["std"] }
 clbs = { git = "https://github.com/corbet-foss/clbs", rev = "873f2dd7388c6d5e025a27b4c55447c4b4892a2d" }
-cpky = { git = "https://github.com/corbet-foss/cpky", rev = "65f93bb78d103d9ee3c25b80ed873130ecf2a6d7" }
+cpky = { git = "https://github.com/corbet-foss/cpky", rev = "5883d21b27d0cc5287d50e983505c91008b3b927" }
 crbk = { git = "https://github.com/corbet-foss/crbk", rev = "954c17762df251c1354bd9303354d82b0a81e487" }
 crgs = { git = "https://github.com/corbet-foss/crgs", rev = "e691f9266401d7af8dc0acfd02ab7553299eeb8a" }
 crlt = { git = "https://github.com/corbet-foss/crlt", rev = "80dc046d6ab53b3ea530c45bf3d7038c8b2c61b2" }

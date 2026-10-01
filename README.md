@@ -2,7 +2,7 @@
 
 **Enrol: the resumable member life cycle from newcomer to member.**
 
-Part of `cvld → cmnt → cmbr`. Native Rust, asynchronous storage, current state
+Part of `cvld → cmty → cmbr`. Native Rust, asynchronous storage, current state
 only. Interfaces may change. [Implemented contract](docs/CONTRACT.md).
 
 ## API

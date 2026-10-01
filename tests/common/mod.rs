@@ -201,14 +201,23 @@ pub fn register(server: &cpky::Passkeys<Credentials>, user: Uuid) -> (SoftToken,
     let response = token
         .perform_register(
             cpky::Url::parse(ORIGIN).unwrap(),
-            challenge.public_key,
+            {
+                // SoftToken is a legacy non-resident fixture.
+                let mut options = challenge.public_key;
+                options
+                    .authenticator_selection
+                    .as_mut()
+                    .unwrap()
+                    .require_resident_key = false;
+                options
+            },
             300_000,
         )
         .unwrap();
     let record = server
         .finish_registration(
             pending,
-            &response,
+            &response.into(),
             cpky::CreationMonth::new(2026, 9).unwrap(),
         )
         .unwrap();
@@ -224,7 +233,9 @@ pub fn login(server: &cpky::Passkeys<Credentials>, token: &mut SoftToken) -> cpk
             300_000,
         )
         .unwrap();
-    server.finish_authentication(pending, &response).unwrap()
+    server
+        .finish_authentication(pending, &response.into())
+        .unwrap()
 }
 
 pub async fn pending<S: Storage, R: crgs::Storage>(

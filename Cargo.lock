@@ -365,10 +365,11 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 [[package]]
 name = "cpky"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/cpky?rev=65f93bb78d103d9ee3c25b80ed873130ecf2a6d7#65f93bb78d103d9ee3c25b80ed873130ecf2a6d7"
+source = "git+https://github.com/corbet-foss/cpky?rev=5883d21b27d0cc5287d50e983505c91008b3b927#5883d21b27d0cc5287d50e983505c91008b3b927"
 dependencies = [
  "crlt",
  "serde",
+ "serde_json",
  "serde_cbor_2",
  "tokio",
  "tracing",
