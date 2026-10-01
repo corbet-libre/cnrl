@@ -209,6 +209,13 @@ async fn legal_blocks_preserve_scope_and_period_and_permanent_blocks_release() {
     assert_eq!(lapsed.state(), State::Lapsed);
     assert_eq!(
         enrol
+            .apply(&lapsed, Event::Restriction(&temporary), now())
+            .await
+            .unwrap(),
+        lapsed
+    );
+    assert_eq!(
+        enrol
             .apply(&lapsed, Event::Restriction(&temporary), now() + 60)
             .await,
         Err(Error::InvalidInput)
@@ -242,4 +249,27 @@ async fn invalid_signatures_cannot_produce_release_receipts() {
     signed.order.subject = "tampered".into();
     assert!(gate.self_ban(&signed).await.is_err());
     assert!(gate.record("tampered").await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn authentic_foreign_restrictions_cannot_change_another_enrolment() {
+    let enrol = enrol(cnrl::MemoryStorage::new(COMMUNITY).unwrap());
+    let row = enrol.start(USER, SUBJECT, now()).await.unwrap();
+    for (community, subject) in [("foreign", SUBJECT), (COMMUNITY, "foreign-member")] {
+        let gate = clbs::Gate::new(clbs::MemoryStore::new(community).unwrap(), Verifier, Clock);
+        let mut signed = order("foreign", legal(), Scope::All, None);
+        signed.order.community = community.into();
+        signed.order.subject = subject.into();
+        signed.proof = SigningKey::from_bytes(&[7; 32])
+            .sign(&signed.order.signing_payload().unwrap())
+            .to_bytes()
+            .to_vec();
+        gate.record_legal(&signed).await.unwrap();
+        let record = gate.record("foreign").await.unwrap().unwrap();
+        assert_eq!(
+            enrol.apply(&row, Event::Restriction(&record), now()).await,
+            Err(Error::Scope)
+        );
+    }
+    assert_eq!(enrol.get(USER, now()).await.unwrap(), row);
 }

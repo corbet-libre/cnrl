@@ -217,7 +217,7 @@ async fn lifecycle<S: Storage, R: crgs::Storage>(store: S, register: crgs::Regis
 }
 
 fn register_passkey(
-    server: &ckyh::Passkeys<Credentials>,
+    server: &PasskeyFixture,
 ) -> (
     webauthn_authenticator_rs::softtoken::SoftToken,
     ckyh::StoredPasskey,
@@ -242,6 +242,133 @@ async fn libsql_lifecycle() {
     let dir = tempfile::tempdir().unwrap();
     let db = open(&dir.path().join("members.db")).await;
     lifecycle(
+        LibsqlStorage::new(&db, COMMUNITY).unwrap(),
+        crgs::Register::new(
+            crgs::LibsqlStorage::new(db.community(COMMUNITY).unwrap()),
+            crgs::ReleasePeriod::default(),
+        ),
+    )
+    .await;
+}
+
+async fn register_release<S: Storage, R: crgs::Storage>(store: S, register: crgs::Register<R>) {
+    let enrol = enrol(store);
+    let started = enrol.start(USER, SUBJECT, now()).await.unwrap();
+    let (_, passkey) = common::register(&passkeys(COMMUNITY), USER);
+    let keyed = enrol
+        .apply(&started, Event::PasskeyRegistered(&passkey), now())
+        .await
+        .unwrap();
+    let reserved = register
+        .reserve_handle(reservation(&keyed), date(now()))
+        .await
+        .unwrap();
+    let held = enrol
+        .apply(&keyed, Event::HandleReserved(&reserved), now())
+        .await
+        .unwrap();
+    let (gates, decision) = enrol
+        .evaluate(&held, &policy(COMMUNITY), &[proof(COMMUNITY)], now())
+        .await
+        .unwrap();
+    let member = register
+        .admit(admission(&gates), date(now()))
+        .await
+        .unwrap();
+    let admitted = enrol
+        .apply(
+            &gates,
+            Event::AdmissionRecorded {
+                member: &member,
+                decision: &decision,
+            },
+            now(),
+        )
+        .await
+        .unwrap();
+    // A retained handle is not a release receipt, even from the real register.
+    assert_eq!(
+        enrol
+            .apply(&admitted, Event::RegisterReleased(&member), now())
+            .await,
+        Err(Error::Transition)
+    );
+    let later = "2030-01-01T00:00:00Z"
+        .parse::<chrono::DateTime<chrono::Utc>>()
+        .unwrap();
+    register.release_expired(later, 10).await.unwrap();
+    let released_member = register
+        .member(&admitted.member_id())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(released_member.handle.is_none());
+    // A real historical release receipt cannot terminate a pending lifecycle.
+    let pending_facade = common::enrol(MemoryStorage::new(COMMUNITY).unwrap());
+    let pending = pending_facade
+        .start(USER, SUBJECT, later.timestamp())
+        .await
+        .unwrap();
+    assert_eq!(
+        pending_facade
+            .apply(
+                &pending,
+                Event::RegisterReleased(&released_member),
+                later.timestamp()
+            )
+            .await,
+        Err(Error::Transition)
+    );
+    let mut wrong = released_member.clone();
+    wrong.id = crgs::MemberId::new(b"other-owner".to_vec()).unwrap();
+    assert_eq!(
+        enrol
+            .apply(
+                &admitted,
+                Event::RegisterReleased(&wrong),
+                later.timestamp()
+            )
+            .await,
+        Err(Error::Scope)
+    );
+    let released = enrol
+        .apply(
+            &admitted,
+            Event::RegisterReleased(&released_member),
+            later.timestamp(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(released.state(), State::Released);
+    assert_eq!(
+        released.state().membership(),
+        crbk::MembershipState::Released
+    );
+    assert_eq!(
+        enrol.start(USER, SUBJECT, later.timestamp()).await.unwrap(),
+        released
+    );
+    assert_eq!(
+        enrol
+            .apply(&released, Event::CredentialIssued, later.timestamp())
+            .await,
+        Err(Error::Transition)
+    );
+}
+
+#[tokio::test]
+async fn actual_register_release_ends_both_persistent_and_memory_lifecycles() {
+    register_release(
+        MemoryStorage::new(COMMUNITY).unwrap(),
+        crgs::Register::new(
+            crgs::MemoryStorage::default(),
+            crgs::ReleasePeriod::default(),
+        ),
+    )
+    .await;
+    let dir = tempfile::tempdir().unwrap();
+    let db = open(&dir.path().join("release.db")).await;
+    register_release(
         LibsqlStorage::new(&db, COMMUNITY).unwrap(),
         crgs::Register::new(
             crgs::LibsqlStorage::new(db.community(COMMUNITY).unwrap()),
@@ -422,4 +549,74 @@ async fn pure_expiry_views_and_no_return_hold_in_both_stores() {
     let dir = tempfile::tempdir().unwrap();
     let db = open(&dir.path().join("no-return.db")).await;
     no_return(LibsqlStorage::new(&db, COMMUNITY).unwrap()).await;
+}
+
+#[tokio::test]
+async fn actual_register_months_are_inclusive_until_the_next_calendar_month() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = open(&dir.path().join("month-boundaries.db")).await;
+    let facade = enrol(LibsqlStorage::new(&db, COMMUNITY).unwrap());
+    let register = crgs::Register::new(
+        crgs::LibsqlStorage::new(db.community(COMMUNITY).unwrap()),
+        crgs::ReleasePeriod::default(),
+    );
+    let held = pending(&facade, &register).await;
+    let (gates, decision) = facade
+        .evaluate(&held, &policy(COMMUNITY), &[proof(COMMUNITY)], now())
+        .await
+        .unwrap();
+    let mut initial = admission(&gates);
+    initial.lease_end = crgs::YearMonth::new(2026, 9).unwrap();
+    let member = register.admit(initial, date(now())).await.unwrap();
+    let mut row = facade
+        .apply(
+            &gates,
+            Event::AdmissionRecorded {
+                member: &member,
+                decision: &decision,
+            },
+            now(),
+        )
+        .await
+        .unwrap();
+    let mut member = member;
+    for (timestamp, year, month) in [
+        ("2026-10-01T00:00:00Z", 2026, 10),
+        ("2027-01-01T00:00:00Z", 2027, 1),
+    ] {
+        let at = timestamp.parse::<chrono::DateTime<chrono::Utc>>().unwrap();
+        assert_eq!(
+            facade
+                .apply(
+                    &row,
+                    Event::AdmissionRecorded {
+                        member: &member,
+                        decision: &decision
+                    },
+                    at.timestamp()
+                )
+                .await,
+            Err(Error::InvalidInput)
+        );
+        member = register
+            .extend_lease(
+                &row.member_id(),
+                crgs::YearMonth::new(year, month).unwrap(),
+                at,
+            )
+            .await
+            .unwrap();
+        row = facade
+            .apply(
+                &row,
+                Event::AdmissionRecorded {
+                    member: &member,
+                    decision: &decision,
+                },
+                at.timestamp(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(row.state(), State::Admitted);
+    }
 }

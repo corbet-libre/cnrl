@@ -5,7 +5,7 @@ import { checkPins } from './check-pins.mjs';
 const revision = '6b94dacd7fa04aa8847c62c6471a1fc5c0f6c9dc';
 const older = '9c076b1e4050529406df27533e12c8e0dd1fc0db';
 const source = (name, rev = revision) =>
-  `git+https://github.com/corbet-foss/${name}?rev=${rev}#${rev}`;
+  `git+https://github.com/corbet-foss/${name}?branch=main#${rev}`;
 const pkg = (name, source = null, dependencies = []) => ({ name, source, dependencies });
 const graph = (...packages) => ({
   packages: [pkg('crbk'), pkg('crlt', source('crlt')), ...packages],
@@ -26,13 +26,16 @@ test('reject duplicate direct and transitive Corbet packages', () => {
 test('reject other branches, tags, unqualified and abbreviated revisions', () => {
   for (const query of ['branch=develop', 'tag=v1', '', `rev=${revision.slice(0, 7)}`]) {
     const floating = `git+https://github.com/corbet-foss/csgn?${query}#${revision}`;
-    assert.throws(() => checkPins(graph(pkg('csgn', floating))), /revision pin/);
+    assert.throws(() => checkPins(graph(pkg('csgn', floating))), /Expected main/);
   }
 });
 
-test('reject a resolved revision different from its pin', () => {
-  const mismatch = source('csgn').replace(`#${revision}`, `#${older}`);
-  assert.throws(() => checkPins(graph(pkg('csgn', mismatch))), /revision pin/);
+test('reject every matching transitive revision pin', () => {
+  const pinned = `git+https://github.com/corbet-foss/csgn?rev=${revision}#${revision}`;
+  assert.throws(() => checkPins(graph(pkg('csgn', pinned))), /Expected main/);
+  assert.throws(() => checkPins(graph(pkg('csgn', source('csgn'), [
+    { source: pinned.split('#')[0] },
+  ]))), /Expected main/);
 });
 
 test('accept main declarations with a unique complete resolution', () => {
@@ -45,5 +48,5 @@ test('accept main declarations with a unique complete resolution', () => {
 
 test('require the crlt Git dependency', () => {
   assert.throws(() => checkPins({ packages: [pkg('crbk')] }), /Missing/);
-  assert.throws(() => checkPins({ packages: [pkg('crbk'), pkg('crlt')] }), /unpinned/);
+  assert.throws(() => checkPins({ packages: [pkg('crbk'), pkg('crlt')] }), /invalid/);
 });

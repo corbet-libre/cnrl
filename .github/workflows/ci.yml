@@ -15,6 +15,8 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
     - uses: dtolnay/rust-toolchain@stable
+    - name: Check the committed dependency graph before refresh
+      run: python3 .github/check-first-party.py
     - name: Resolve one fresh dependency snapshot
       run: 'cargo update
 
@@ -80,7 +82,11 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         name: resolved-lock
-    - run: python3 .github/check-first-party.py
+    - run: 'python3 .github/check-first-party.py
+
+        python3 .github/test-source-coverage.py
+
+        node --test .github/test-auto-merge.mjs'
     - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0
       with:
         tool: cargo-deny
@@ -120,10 +126,13 @@ jobs:
     - name: Export source counters from the same execution
       run: cargo llvm-cov report --locked --branch --ignore-filename-regex '/tests/' --lcov --output-path
         coverage.lcov
+    - name: Export independent source locations from the same execution
+      run: cargo llvm-cov report --locked --branch --ignore-filename-regex '/tests/' --text --output-path
+        coverage.txt
     - name: Require every emitted source line and branch
       run: 'python3 .github/check-coverage.py coverage.json || true
 
-        python3 .github/check-source-coverage.py coverage.lcov coverage.json'
+        python3 .github/check-source-coverage.py coverage.lcov coverage.json coverage.txt'
     - uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -134,7 +143,9 @@ jobs:
 
           Cargo.lock
 
-          resolver.txt'
+          resolver.txt
+
+          coverage.txt'
         retention-days: 7
 'on':
   push:

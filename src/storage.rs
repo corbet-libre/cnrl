@@ -152,6 +152,21 @@ impl LibsqlStorage {
         }
         Ok(record)
     }
+
+    // The index scan and payload reads are deliberately separate. A concurrent
+    // cleanup may remove a row or clear its marker between these reads.
+    async fn load_cleanup(&self, keys: Vec<Row>) -> Result<Vec<Record>> {
+        let mut records = Vec::new();
+        for row in keys {
+            let user = Uuid::parse_str(row.get_str(0)?).map_err(|_| Error::Storage)?;
+            if let Some(record) = self.load(user).await?
+                && record.needs_cleanup()
+            {
+                records.push(record);
+            }
+        }
+        Ok(records)
+    }
 }
 
 const LOAD: &str = "SELECT payload, user_id, subject, expires_day, cleanup FROM cnrl_enrolments WHERE user_id = ?1";
@@ -252,16 +267,8 @@ impl Storage for LibsqlStorage {
         batch(limit)?;
         // Enumerate only keys so SQLite uses the covering cleanup index even
         // when very few rows exist, then load each payload through its primary key.
-        let mut records = Vec::new();
-        for row in self.scope.query(CLEANUP, [limit as i64]).await? {
-            let user = Uuid::parse_str(row.get_str(0)?).map_err(|_| Error::Storage)?;
-            if let Some(record) = self.load(user).await?
-                && record.needs_cleanup()
-            {
-                records.push(record);
-            }
-        }
-        Ok(records)
+        self.load_cleanup(self.scope.query(CLEANUP, [limit as i64]).await?)
+            .await
     }
 }
 
@@ -328,58 +335,5 @@ fn validate_transition(previous: &Record, next: &Record) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn every_query_is_indexed() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = crlt::Db::open(crlt::Config::new(
-            format!("file://{}", dir.path().join("plans.db").display()),
-            "",
-        ))
-        .await
-        .unwrap();
-        db.migrate(&[crlt::Migration::new(1, "cnrl", SCHEMA)])
-            .await
-            .unwrap();
-        let scope = db.community("a").unwrap();
-        let cases = [
-            (LOAD, vec![Value::Text("user".into())]),
-            (SUBJECT, vec![Value::Text("subject".into())]),
-            (DUE, vec![Value::Integer(1), Value::Integer(10)]),
-            (CLEANUP, vec![Value::Integer(10)]),
-            (
-                INSERT,
-                vec![
-                    Value::Text("user".into()),
-                    Value::Text("subject".into()),
-                    Value::Integer(1),
-                    Value::Integer(0),
-                    Value::Text("{}".into()),
-                ],
-            ),
-            (
-                UPDATE,
-                vec![
-                    Value::Null,
-                    Value::Integer(0),
-                    Value::Text("{}".into()),
-                    Value::Text("user".into()),
-                ],
-            ),
-        ];
-        for (sql, params) in cases {
-            scope
-                .explain(sql, params)
-                .await
-                .unwrap()
-                .assert_indexed()
-                .unwrap();
-        }
-        let plan = scope.explain(DUE, params![1, 10]).await.unwrap();
-        assert!(plan.details().iter().any(|d| d.contains("cnrl_expiry")));
-        let plan = scope.explain(CLEANUP, [10]).await.unwrap();
-        assert!(plan.details().iter().any(|d| d.contains("cnrl_cleanup")));
-    }
-}
+#[path = "../tests/unit/storage.rs"]
+mod tests;

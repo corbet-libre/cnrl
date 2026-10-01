@@ -66,13 +66,15 @@ async fn passkey_receipts_and_authentication_enforce_scope_and_revocation() {
         Err(Error::Scope)
     );
     let (_, passkey) = register(&server, USER);
-    server.revoke(USER, passkey.credential_id()).unwrap();
-    let revoked = server
-        .list(USER)
-        .unwrap()
-        .into_iter()
-        .find(|r| r.credential_id() == passkey.credential_id())
-        .unwrap();
+    let revoked = server.with(|server| {
+        server.revoke(USER, passkey.credential_id()).unwrap();
+        server
+            .list(USER)
+            .unwrap()
+            .into_iter()
+            .find(|r| r.credential_id() == passkey.credential_id())
+            .unwrap()
+    });
     assert_eq!(
         enrol
             .apply(&row, Event::PasskeyRegistered(&revoked), now())
@@ -448,10 +450,26 @@ async fn storage_rejects_skipped_states<S: Storage + Clone>(store: S, terminal_s
         &reserved,
         json!({"state":terminal_state, "expires_day":null, "revision":4}),
     );
+    // Termination must retain the marker until the real register is cancelled.
+    assert_eq!(
+        store
+            .compare_exchange(
+                Some(&reserved),
+                &edited(&terminal, json!({"skeleton":null}))
+            )
+            .await,
+        Err(Error::Transition)
+    );
     store
         .compare_exchange(Some(&reserved), &terminal)
         .await
         .unwrap();
+    assert_eq!(
+        store
+            .compare_exchange(Some(&terminal), &edited(&terminal, json!({"revision":5})))
+            .await,
+        Err(Error::Transition)
+    );
     let revival = edited(&admitted, json!({"revision":5}));
     assert_eq!(
         store.compare_exchange(Some(&terminal), &revival).await,
@@ -466,7 +484,13 @@ async fn storage_rejects_skipped_states<S: Storage + Clone>(store: S, terminal_s
         .compare_exchange(Some(&terminal), &cleaned)
         .await
         .unwrap();
-    assert_eq!(store.load(USER).await.unwrap(), Some(cleaned));
+    assert_eq!(store.load(USER).await.unwrap(), Some(cleaned.clone()));
+    assert_eq!(
+        store
+            .compare_exchange(Some(&cleaned), &edited(&cleaned, json!({"revision":6})))
+            .await,
+        Err(Error::Transition)
+    );
     let inserted = edited(
         &admitted,
         json!({"user":Uuid::from_u128(2), "subject":"other", "revision":1}),

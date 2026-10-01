@@ -1,11 +1,8 @@
 #![allow(dead_code)]
 
-use ckyh::{CredentialID, CredentialStore, Error, StoredPasskey, Uuid};
+use ckyh::{StoredPasskey, Uuid};
 use cnrl::{Config, Enrol, Record, Storage};
-use std::{
-    collections::BTreeMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::LazyLock;
 use webauthn_authenticator_rs::{AuthenticatorBackend, softtoken::SoftToken};
 
 pub const USER: Uuid = Uuid::from_u128(1);
@@ -108,134 +105,114 @@ pub fn policy(community: &str) -> crbk::Snapshot {
     }
 }
 
-// Real credential storage for real WebAuthn ceremonies; updates commit a copy.
-type Key = (String, Vec<u8>);
-#[derive(Clone, Default)]
-pub struct Credentials(Arc<Mutex<BTreeMap<Key, StoredPasskey>>>);
-
-impl CredentialStore for Credentials {
-    fn list(&self, community: &str, member: Uuid) -> Result<Vec<StoredPasskey>, Error> {
-        Ok(self
-            .0
-            .lock()
-            .unwrap()
-            .values()
-            .filter(|r| r.community() == community && r.member() == member)
-            .cloned()
-            .collect())
-    }
-    fn insert(&self, record: StoredPasskey) -> Result<(), Error> {
-        let mut rows = self.0.lock().unwrap();
-        let key = (
-            record.community().into(),
-            record.credential_id().as_ref().to_vec(),
-        );
-        if rows.contains_key(&key) {
-            return Err(Error::DuplicateCredential);
-        }
-        rows.insert(key, record);
-        Ok(())
-    }
-    fn insert_authorized(
-        &self,
-        record: StoredPasskey,
-        auth: &ckyh::Authentication,
-    ) -> Result<(), Error> {
-        let mut rows = self.0.lock().unwrap();
-        if auth.community() != record.community() || auth.member() != record.member() {
-            return Err(Error::NotFound);
-        }
-        let current = rows
-            .get(&(
-                auth.community().into(),
-                auth.credential_id().as_ref().to_vec(),
-            ))
-            .ok_or(Error::NotFound)?;
-        if current.member() != record.member()
-            || serde_json::to_value(current).unwrap()["rp_id"]
-                != serde_json::to_value(&record).unwrap()["rp_id"]
-        {
-            return Err(Error::NotFound);
-        }
-        if current.is_revoked() {
-            return Err(Error::Revoked);
-        }
-        let key = (
-            record.community().into(),
-            record.credential_id().as_ref().to_vec(),
-        );
-        if rows.contains_key(&key) {
-            return Err(Error::DuplicateCredential);
-        }
-        rows.insert(key, record);
-        Ok(())
-    }
-    fn update<T>(
-        &self,
-        community: &str,
-        credential_id: &CredentialID,
-        change: impl FnOnce(&mut StoredPasskey) -> Result<T, Error>,
-    ) -> Result<T, Error> {
-        let mut rows = self.0.lock().unwrap();
-        let key = (community.into(), credential_id.as_ref().to_vec());
-        let mut record = rows.get(&key).ok_or(Error::NotFound)?.clone();
-        let result = change(&mut record)?;
-        rows.insert(key, record);
-        Ok(result)
-    }
-}
-
-pub fn passkeys(community: &str) -> ckyh::Passkeys<Credentials> {
-    ckyh::Passkeys::new(
-        Credentials::default(),
-        community,
-        "members.example.org",
-        &[ckyh::Url::parse(ORIGIN).unwrap()],
-    )
-    .unwrap()
-}
-
-pub fn register(server: &ckyh::Passkeys<Credentials>, user: Uuid) -> (SoftToken, StoredPasskey) {
-    let mut token = SoftToken::new(true).unwrap().0;
-    let (challenge, pending) = server.start_registration(user).unwrap();
-    let response = token
-        .perform_register(
-            ckyh::Url::parse(ORIGIN).unwrap(),
-            {
-                // SoftToken is a legacy non-resident fixture.
-                let mut options = challenge.public_key;
-                options
-                    .authenticator_selection
-                    .as_mut()
-                    .unwrap()
-                    .require_resident_key = false;
-                options
-            },
-            300_000,
-        )
-        .unwrap();
-    let record = server
-        .finish_registration(
-            pending,
-            &response.into(),
-            ckyh::CreationMonth::new(2026, 9).unwrap(),
-        )
-        .unwrap();
-    (token, record)
-}
-
-pub fn login(server: &ckyh::Passkeys<Credentials>, token: &mut SoftToken) -> ckyh::Authentication {
-    let (challenge, pending) = server.start_authentication(USER).unwrap();
-    let response = token
-        .perform_auth(
-            ckyh::Url::parse(ORIGIN).unwrap(),
-            challenge.public_key,
-            300_000,
-        )
-        .unwrap();
-    server
-        .finish_authentication(pending, &response.into())
+// The owner store needs a multithreaded runtime kept alive by the test process.
+// Calls run on ordinary threads because its synchronous API drives that runtime.
+static PASSKEY_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
         .unwrap()
+});
+
+pub struct PasskeyFixture {
+    server: ckyh::Passkeys<ckyh::LibsqlStore>,
+    _directory: tempfile::TempDir,
+}
+
+impl PasskeyFixture {
+    pub fn with<T: Send>(
+        &self,
+        call: impl FnOnce(&ckyh::Passkeys<ckyh::LibsqlStore>) -> T + Send,
+    ) -> T {
+        std::thread::scope(|scope| scope.spawn(|| call(&self.server)).join().unwrap())
+    }
+}
+
+pub fn passkeys(community: &str) -> PasskeyFixture {
+    std::thread::scope(|scope| {
+        scope
+            .spawn(|| {
+                let directory = tempfile::tempdir().unwrap();
+                let db = PASSKEY_RUNTIME.block_on(async {
+                    let db = crlt::Db::open(crlt::Config::new(
+                        format!("file://{}", directory.path().join("passkeys.db").display()),
+                        "",
+                    ))
+                    .await
+                    .unwrap();
+                    db.migrate(&[crlt::Migration::new(
+                        1,
+                        "cpky_passkeys",
+                        ckyh::LIBSQL_SCHEMA,
+                    )])
+                    .await
+                    .unwrap();
+                    db
+                });
+                let server = ckyh::Passkeys::new(
+                    ckyh::LibsqlStore::new(&db, community, PASSKEY_RUNTIME.handle().clone())
+                        .unwrap(),
+                    community,
+                    "members.example.org",
+                    &[ckyh::Url::parse(ORIGIN).unwrap()],
+                )
+                .unwrap();
+                PasskeyFixture {
+                    server,
+                    _directory: directory,
+                }
+            })
+            .join()
+            .unwrap()
+    })
+}
+
+pub fn register(server: &PasskeyFixture, user: Uuid) -> (SoftToken, StoredPasskey) {
+    server.with(|server| {
+        let mut token = SoftToken::new(true).unwrap().0;
+        let (challenge, pending) = server.start_registration(user).unwrap();
+        let response = token
+            .perform_register(
+                ckyh::Url::parse(ORIGIN).unwrap(),
+                {
+                    // SoftToken is a legacy non-resident fixture.
+                    let mut options = challenge.public_key;
+                    options
+                        .authenticator_selection
+                        .as_mut()
+                        .unwrap()
+                        .require_resident_key = false;
+                    options
+                },
+                300_000,
+            )
+            .unwrap();
+        let record = server
+            .finish_registration(
+                pending,
+                &response.into(),
+                ckyh::CreationMonth::new(2026, 9).unwrap(),
+            )
+            .unwrap();
+        (token, record)
+    })
+}
+
+pub fn login(server: &PasskeyFixture, token: &mut SoftToken) -> ckyh::Authentication {
+    server.with(|server| {
+        let (challenge, pending) = server.start_authentication(USER).unwrap();
+        let response = token
+            .perform_auth(
+                ckyh::Url::parse(ORIGIN).unwrap(),
+                challenge.public_key,
+                300_000,
+            )
+            .unwrap();
+        server
+            .finish_authentication(pending, &response.into())
+            .unwrap()
+    })
 }
 
 pub async fn pending<S: Storage, R: crgs::Storage>(

@@ -146,11 +146,7 @@ impl<S: Storage> Enrol<S> {
                 }
                 text(&proof.gate)?;
                 text(&proof.provider)?;
-                if proof.valid_until <= now
-                    || proof
-                        .proven_at
-                        .is_some_and(|t| t < 0 || t > now)
-                {
+                if proof.valid_until <= now || proof.proven_at.is_some_and(|t| t < 0 || t > now) {
                     return Err(Error::InvalidInput);
                 }
                 enter_gates(&mut next)?;
@@ -176,9 +172,11 @@ impl<S: Storage> Enrol<S> {
                     return Err(Error::Scope);
                 }
                 let handle = member.handle.as_ref().ok_or(Error::InvalidInput)?;
-                let month = crgs::YearMonth::new(date.year() as u16, date.month() as u8)
-                    .map_err(|_| Error::InvalidInput)?;
-                if member.lease_end < month {
+                // Both owners have already validated these calendar fields.
+                // Compare them directly without constructing a second month.
+                if (member.lease_end.year(), member.lease_end.month())
+                    < (date.year() as u16, date.month() as u8)
+                {
                     return Err(Error::InvalidInput);
                 }
                 match next.state {

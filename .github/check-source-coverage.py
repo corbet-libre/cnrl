@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Require all emitted source lines and branches from the same LLVM execution."""
 import json
+import re
 from collections import Counter
 import sys
 from pathlib import Path
 
 
-def check(lcov, raw_json, root):
+def check(lcov, raw_json, root, annotated):
     root = Path(root).resolve()
 
     def source_path(value):
@@ -17,10 +18,13 @@ def check(lcov, raw_json, root):
 
     if raw_json.get('type') != 'llvm.coverage.json.export' or not raw_json.get('data'):
         raise ValueError('Missing companion raw LLVM JSON')
-    expected = {
-        source_path(item['filename']): item
-        for unit in raw_json['data'] for item in unit['files']
-    }
+    expected = {}
+    for unit in raw_json['data']:
+        for item in unit['files']:
+            path = source_path(item['filename'])
+            if path in expected:
+                raise ValueError('Duplicate companion production file')
+            expected[path] = item
     if not expected:
         raise ValueError('Empty production file inventory')
     files, lines, branches = set(), {}, {}
@@ -89,6 +93,33 @@ def check(lcov, raw_json, root):
             raise ValueError(f'Unexpected LCOV record: {record}')
     if current is not None or files != set(expected) or not lines:
         raise ValueError('Incomplete or empty source coverage inventory')
+    if not isinstance(annotated, str):
+        raise ValueError('Missing same-execution annotated source report')
+    # Cross-check every emitted line location against the same execution's
+    # upstream annotated report. Summary counts alone can include generic copies
+    # and therefore cannot detect a deleted DA record reliably.
+    annotated_lines, annotated_files = {}, set()
+    heading_free = not any(row.endswith('.rs:') and row.startswith('/')
+                           for row in annotated.splitlines())
+    current = next(iter(files)) if heading_free and len(files) == 1 else None
+    if current is not None:
+        annotated_files.add(current)
+    for record in annotated.splitlines():
+        if record.endswith('.rs:') and record.startswith('/'):
+            current = source_path(record[:-1])
+            if current in annotated_files:
+                raise ValueError('Duplicate annotated source')
+            annotated_files.add(current)
+        match = re.match(r'^\s*(\d+)\|\s*([0-9]+(?:\.[0-9]+)?[kMGT]?)\|', record)
+        if match:
+            key = (current, int(match[1]))
+            if current is None or key in annotated_lines:
+                raise ValueError('Invalid annotated line inventory')
+            annotated_lines[key] = float(match[2].rstrip('kMGT')) > 0
+    if annotated_files != files or set(annotated_lines) != set(lines):
+        raise ValueError('Incomplete emitted line inventory')
+    if any((lines[key] > 0) != hit for key, hit in annotated_lines.items()):
+        raise ValueError('Inconsistent emitted line coverage')
     missing_lines = [key for key, count in lines.items() if count == 0]
     missing_branches = [key for key, count in branches.items() if count == 0]
     print(f'lines: {len(lines) - len(missing_lines)}/{len(lines)}')
@@ -99,6 +130,6 @@ def check(lcov, raw_json, root):
 
 if __name__ == '__main__':
     try:
-        check(Path(sys.argv[1]).read_text(), json.loads(Path(sys.argv[2]).read_text()), Path.cwd())
-    except (ValueError, KeyError, TypeError, OSError) as error:
+        check(Path(sys.argv[1]).read_text(), json.loads(Path(sys.argv[2]).read_text()), Path.cwd(), Path(sys.argv[3]).read_text())
+    except (ValueError, KeyError, TypeError, OSError, IndexError) as error:
         sys.exit(f'Coverage gate: {error}')
