@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use cnrl::{Config, Enrol, Record, Storage};
 use ckyh::{CredentialID, CredentialStore, Error, StoredPasskey, Uuid};
+use cnrl::{Config, Enrol, Record, Storage};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
