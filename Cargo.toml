@@ -5,18 +5,18 @@ edition = "2024"
 rust-version = "1.88"
 description = "Enrol: the resumable member life cycle from newcomer to member"
 license = "LGPL-3.0-only WITH LGPL-3.0-linking-exception"
-repository = "https://github.com/corbet-foss/cnrl"
+repository = "https://git.corbet.ch/corbet-foss/cnrl.git"
 readme = "README.md"
 publish = false
 include = ["Cargo.toml", "src/**", "docs/**", "README.md", "LICENSE", "LICENSE.md", "LICENSES/LGPL-3.0-only.txt", "LICENSES/LGPL-3.0-linking-exception.txt", "LICENSES/GPL-3.0-only.txt"]
 
 [dependencies]
 chrono = { version = "0.4.45", default-features = false, features = ["std"] }
-clbs = { git = "https://github.com/corbet-foss/clbs", branch = "main" }
-ckyh = { git = "https://github.com/corbet-foss/ckyh", branch = "main" }
-crbk = { git = "https://github.com/corbet-foss/crbk", branch = "main" }
-crgs = { git = "https://github.com/corbet-foss/crgs", branch = "main" }
-crlt = { git = "https://github.com/corbet-foss/crlt", branch = "main" }
+clbs = { git = "https://git.corbet.ch/corbet-foss/clbs.git", branch = "v01" }
+ckyh = { git = "https://git.corbet.ch/corbet-foss/ckyh.git", branch = "v01" }
+crbk = { git = "https://git.corbet.ch/corbet-foss/crbk.git", branch = "v01" }
+crgs = { git = "https://git.corbet.ch/corbet-foss/crgs.git", branch = "v01" }
+crlt = { git = "https://git.corbet.ch/corbet-foss/crlt.git", branch = "v01" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
