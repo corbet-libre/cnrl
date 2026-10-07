@@ -277,7 +277,7 @@ dependencies = [
 [[package]]
 name = "ckyh"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/ckyh?branch=main#cd8544ec9d1bb769692581bc6f1a6b76289f4e52"
+source = "git+https://git.corbet.ch/corbet-foss/ckyh?branch=main#6ed0cb6bc6248a25983265d4a0fa43661d7bbcd2"
 dependencies = [
  "crlt",
  "serde",
@@ -303,7 +303,7 @@ dependencies = [
 [[package]]
 name = "clbs"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/clbs?branch=main#0a8377e0afbbb3c6050a6b30832b0e55f8d221b7"
+source = "git+https://git.corbet.ch/corbet-foss/clbs?branch=main#cec03a4a4fdafc6b72f352e9192b6102d63b00b6"
 dependencies = [
  "crlt",
  "serde",
@@ -377,7 +377,7 @@ dependencies = [
 [[package]]
 name = "crbk"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/crbk?branch=main#2811a5e1614fbdcd03b493dc8af0e901633d2e5e"
+source = "git+https://git.corbet.ch/corbet-foss/crbk?branch=main#d35cce9df8a976b41fcbd7c3eed546fc429938ad"
 dependencies = [
  "crlt",
  "serde",
@@ -388,7 +388,7 @@ dependencies = [
 [[package]]
 name = "crgs"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/crgs?branch=main#fd15ceff1ab8fa8f9ec57024ab53f3698887e367"
+source = "git+https://git.corbet.ch/corbet-foss/crgs?branch=main#784f1090819693dbf26b18ccdb57fc04902d9a1b"
 dependencies = [
  "chrono",
  "crlt",
@@ -401,7 +401,7 @@ dependencies = [
 [[package]]
 name = "crlt"
 version = "0.0.0"
-source = "git+https://github.com/corbet-foss/crlt?branch=main#8677ba18fc156890b06ee6264be279c401cf3c5b"
+source = "git+https://git.corbet.ch/corbet-foss/crlt?branch=main#0c36cdd223bd215c9b97d6909058617c412b4e75"
 dependencies = [
  "deadpool",
  "libsql",
@@ -2174,7 +2174,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.61.2",

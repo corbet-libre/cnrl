@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-const corbetSource = /^git\+https:\/\/github\.com\/(?:corbet-(?:foss|libs)|cmtymeet)\//;
+const corbetSource = /^git\+https:\/\/git\.corbet\.ch\/(?:corbet-(?:foss|libs)|cmtymeet)\//;
 
 function checkSource(source, resolved) {
   const url = new URL(source.slice(4));

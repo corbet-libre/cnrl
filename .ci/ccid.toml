@@ -13,7 +13,7 @@ kind = "commands"
 commands = [["cargo", "deny", "--locked", "check", "advisories"]]
 
 [render]
-tool_revision = "81ebac8e86e20bc93b69d5e912bbcb0c0d036d58"
+tool_revision = "e38f347d6941aa105ac4b55a0d4b8fec2ef22433"
 
 [jobs.verify]
 scheduler = "crow"
