@@ -277,7 +277,7 @@ dependencies = [
 [[package]]
 name = "ckyh"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/ckyh?branch=main#6ed0cb6bc6248a25983265d4a0fa43661d7bbcd2"
+source = "git+https://git.corbet.ch/corbet-foss/ckyh?branch=main#e0ca44caa2a89a6287d2f586798cda12c3f967ee"
 dependencies = [
  "crlt",
  "serde",
@@ -303,7 +303,7 @@ dependencies = [
 [[package]]
 name = "clbs"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/clbs?branch=main#cec03a4a4fdafc6b72f352e9192b6102d63b00b6"
+source = "git+https://git.corbet.ch/corbet-foss/clbs?branch=main#c2dead27160abbfdc485326cf1c815ef8e0851ec"
 dependencies = [
  "crlt",
  "serde",
@@ -377,7 +377,7 @@ dependencies = [
 [[package]]
 name = "crbk"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/crbk?branch=main#d35cce9df8a976b41fcbd7c3eed546fc429938ad"
+source = "git+https://git.corbet.ch/corbet-foss/crbk?branch=main#e783e8a2766bbd72b70c09cd2fb22983900a1987"
 dependencies = [
  "crlt",
  "serde",
@@ -388,7 +388,7 @@ dependencies = [
 [[package]]
 name = "crgs"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/crgs?branch=main#784f1090819693dbf26b18ccdb57fc04902d9a1b"
+source = "git+https://git.corbet.ch/corbet-foss/crgs?branch=main#a8cf01d58b5a9d660649247f9135b0b03ad53818"
 dependencies = [
  "chrono",
  "crlt",
@@ -401,7 +401,7 @@ dependencies = [
 [[package]]
 name = "crlt"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/crlt?branch=main#0c36cdd223bd215c9b97d6909058617c412b4e75"
+source = "git+https://git.corbet.ch/corbet-foss/crlt?branch=main#276725ccf5c28680818aa81a10c7a2cac243f60f"
 dependencies = [
  "deadpool",
  "libsql",
