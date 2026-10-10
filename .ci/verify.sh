@@ -3,8 +3,7 @@ set -euo pipefail
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
 export CARGO_TERM_COLOR="${CARGO_TERM_COLOR:-always}"
 
-# Resolve once on the build worker; retain this graph for the locked follow-up.
-cargo update
+# Retain the exact committed graph used by all locked checks.
 cp Cargo.lock "${ARTIFACT_ROOT:?}/Cargo.lock"
 
 python3 .github/check-first-party.py
