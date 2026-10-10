@@ -131,7 +131,7 @@ async fn an_actual_schema_loss_after_the_empty_read_cannot_report_registration()
             pause.entered.wait().await;
             let mut history = migrations().to_vec();
             history.push(crlt::Migration::new(
-                4,
+                3,
                 "lose-enrolment-table",
                 "DROP TABLE cnrl_enrolments",
             ));
