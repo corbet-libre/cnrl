@@ -40,7 +40,7 @@ All indexed projections are checked when reading the payload.
 
 ## Dependency survey
 
-Surveyed crates.io and upstream GitHub sources on 2026-09-30 before implementation:
+Surveyed crates.io and upstream sources on 2026-09-30 before implementation:
 
 | Candidate | Decision and reason |
 |---|---|
@@ -75,7 +75,7 @@ there is no claim of cross-crate atomic admission. See the contract for details.
 
 ## Verification
 
-Crow runs stable Rust `cargo fmt --all --check`,
+CI runs stable Rust `cargo fmt --all --check`,
 `cargo clippy --all-targets -- -D warnings`, and `cargo test`. Compilation and tests never run
 on the workstation. Tests use actual storage, libSQL files, WebAuthn ceremonies,
 rulebook decisions and signed clbs records. The resolved dependency lockfile is
