@@ -26,11 +26,10 @@ pub fn enrol<S: Storage>(store: S) -> Enrol<S> {
     Enrol::new(store, Config::new(2, ACTION).unwrap())
 }
 
-pub fn migrations() -> [crlt::Migration<'static>; 3] {
+pub fn migrations() -> [crlt::Migration<'static>; 2] {
     [
         crlt::Migration::new(1, "cnrl", cnrl::SCHEMA),
         crlt::Migration::new(2, "crgs", crgs::SCHEMA),
-        crlt::Migration::new(3, "clbs", clbs::SCHEMA),
     ]
 }
 

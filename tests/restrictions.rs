@@ -76,11 +76,8 @@ async fn self_ban_releases_pending_and_cleanup_survives_reopen() {
         crgs::ReleasePeriod::default(),
     );
     let pending = pending(&enrol, &register).await;
-    let gate = clbs::Gate::new(
-        clbs::LibsqlStore::new(&db, COMMUNITY).unwrap(),
-        Verifier,
-        Clock,
-    );
+    let gate = clbs::Gate::new(clbs::MemoryStore::new(COMMUNITY).unwrap(), Verifier, Clock);
+    // Legal verification is RAM-only; cnrl/crgs still exercise actual durable cleanup.
     let signed = order("self-ban", OrderKind::SelfBan, Scope::All, None);
     gate.self_ban(&signed).await.unwrap();
     let verified = gate.record("self-ban").await.unwrap().unwrap();
@@ -169,11 +166,7 @@ async fn legal_blocks_preserve_scope_and_period_and_permanent_blocks_release() {
         )
         .await
         .unwrap();
-    let gate = clbs::Gate::new(
-        clbs::LibsqlStore::new(&db, COMMUNITY).unwrap(),
-        Verifier,
-        Clock,
-    );
+    let gate = clbs::Gate::new(clbs::MemoryStore::new(COMMUNITY).unwrap(), Verifier, Clock);
     let other_action = order(
         "other-action",
         legal(),

@@ -75,16 +75,21 @@ there is no claim of cross-crate atomic admission. See the contract for details.
 
 ## Verification
 
-GitHub Actions runs stable Rust `cargo fmt --all --check`,
+Crow runs stable Rust `cargo fmt --all --check`,
 `cargo clippy --all-targets -- -D warnings`, and `cargo test`. Cargo is never run
 on the workstation. Tests use actual storage, libSQL files, WebAuthn ceremonies,
 rulebook decisions and signed clbs records. The resolved dependency lockfile is
 retained as a CI artifact and committed after resolution on CI.
 
-The optional Turso test skips unless both `TURSO_URL` and `TURSO_TOKEN` are
-nonempty. Use a **disposable test database**: it migrates schema and writes test
-records. No credentials are committed or configured in GitHub Actions. Never
-publish this crate to a registry.
+The optional Turso test is ignored by default and requires explicit operator
+authorization, `--ignored` selection, and nonempty `TURSO_URL`/`TURSO_TOKEN`. Use a
+**disposable test database**: it migrates schema and writes test records. No live
+probe is run by ordinary CI. Never publish this crate to a registry.
+
+Restriction fixtures use the real clbs RAM store and signed verifier. Enrolment
+and registration still use actual libSQL files to test persistence and resumable
+cleanup. Legal SQL persistence belongs to the caller; cnrl neither requires its
+schema nor imports a higher-level gate facade to create restriction fixtures.
 
 ## License
 

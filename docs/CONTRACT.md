@@ -24,8 +24,8 @@ does not derive, truncate, hash or otherwise invent a pseudonym mapping.
 
 `Event` has no deserializer. Passkeys must come from ckyh's committed store;
 reservations and admissions from the same community's crgs; gate metadata and
-decisions from verified cgts/crbk inputs; restrictions from clbs's private-
-constructor `Record`. cnrl checks identities, community bindings when carried,
+decisions from verified cgts/crbk inputs; restrictions from clbs `Record` values
+verified by its Gate or restored from trusted caller-owned operational state. cnrl checks identities, community bindings when carried,
 revocation, expiry, scope and structural consistency, but cannot authenticate
 a caller that can manufacture a public crgs/crbk value. It is not an API server.
 
@@ -131,12 +131,15 @@ legal verifier is implemented here.
 
 ## Acceptance
 
-Stable Rust formatting, strict Clippy and tests run only on GitHub Actions.
+Stable Rust formatting, strict Clippy and tests run on Crow.
 Tests exercise both stores, actual libSQL files, persistence, isolation,
 concurrent revisions, expiry boundaries, ownership-safe cleanup, real passkey
 ceremonies, rulebook decisions, signed legal/self-ban records and failures.
-An optional real-Turso test skips unless both environment credentials exist;
-public CI has neither. No registry publication.
+The optional real-Turso test is ignored and requires explicit operator
+authorization, selection and disposable database credentials. Ordinary CI makes
+no live calls. Restriction fixtures use clbs MemoryStore; enrolment/registration
+persistence and reopen behavior continue to use real libSQL files. No registry
+publication.
 
 ## Permanent no-return rule and pure reads
 

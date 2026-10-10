@@ -3,6 +3,10 @@ set -euo pipefail
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
 export CARGO_TERM_COLOR="${CARGO_TERM_COLOR:-always}"
 
+# Resolve once on the build worker; retain this graph for the locked follow-up.
+cargo update
+cp Cargo.lock "${ARTIFACT_ROOT:?}/Cargo.lock"
+
 python3 .github/check-first-party.py
 python3 .github/test-source-coverage.py
 node --test .github/test-auto-merge.mjs

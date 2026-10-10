@@ -2,6 +2,7 @@
 use cnrl::{Config, Enrol, LibsqlStorage, State};
 
 #[tokio::test]
+#[ignore = "requires explicit operator authorization and a disposable remote database"]
 async fn optional_turso_round_trip() {
     let (Ok(url), Ok(token)) = (std::env::var("TURSO_URL"), std::env::var("TURSO_TOKEN")) else {
         eprintln!("Skipping Turso: TURSO_URL and TURSO_TOKEN must both be set");
