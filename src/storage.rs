@@ -6,6 +6,8 @@ use tokio::sync::Mutex;
 
 use crate::{Error, Record, Result, State, enrol::batch, model::text};
 
+mod transaction;
+
 /// Add this DDL to the service's complete crlt migration history.
 pub const SCHEMA: &str = include_str!("schema.sql");
 
@@ -206,48 +208,13 @@ impl Storage for LibsqlStorage {
     async fn compare_exchange(&self, previous: Option<&Record>, next: &Record) -> Result<()> {
         validate_write(&self.community, previous, next)?;
         let mut tx = self.scope.tx().await?;
-        let current = tx
-            .query(LOAD, [next.user.to_string()])
-            .await?
-            .first()
-            .map(|r| self.decode(r))
-            .transpose()?;
-        if current.as_ref() == Some(next) {
-            tx.commit().await?;
-            return Ok(());
-        }
-        if current.as_ref() != previous {
-            tx.rollback().await?;
-            return Err(Error::Conflict);
-        }
-        let payload = serde_json::to_string(next).map_err(|_| Error::Storage)?;
-        if previous.is_some() {
-            tx.execute(
-                UPDATE,
-                params![
-                    next.expires_day,
-                    i64::from(next.needs_cleanup()),
-                    payload,
-                    next.user.to_string()
-                ],
-            )
-            .await?;
-        } else {
-            if !tx.query(SUBJECT, [next.subject.as_str()]).await?.is_empty() {
+        match self.stage_compare_exchange(&mut tx, previous, next).await {
+            Ok(()) => {}
+            Err(Error::Conflict) => {
                 tx.rollback().await?;
                 return Err(Error::Conflict);
             }
-            tx.execute(
-                INSERT,
-                params![
-                    next.user.to_string(),
-                    next.subject.clone(),
-                    next.expires_day,
-                    i64::from(next.needs_cleanup()),
-                    payload
-                ],
-            )
-            .await?;
+            Err(error) => return Err(error),
         }
         tx.commit().await?;
         Ok(())

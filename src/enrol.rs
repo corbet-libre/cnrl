@@ -6,6 +6,8 @@ use crate::{
     model::{DAY, text, time},
 };
 
+mod transaction;
+
 /// Community enrolment facade. Clones of a storage backend share current state.
 pub struct Enrol<S> {
     storage: S,
@@ -89,6 +91,12 @@ impl<S: Storage> Enrol<S> {
     /// same snapshot/event returns the same row. A later revision conflicts,
     /// including after a complete admitted/lapsed/admitted cycle.
     pub async fn apply(&self, expected: &Record, event: Event<'_>, now: i64) -> Result<Record> {
+        let next = self.prepare_event(expected, event, now)?;
+        self.storage.compare_exchange(Some(expected), &next).await?;
+        Ok(next)
+    }
+
+    fn prepare_event(&self, expected: &Record, event: Event<'_>, now: i64) -> Result<Record> {
         self.scope(expected)?;
         let date = time(now)?;
         let mut next = expected.clone();
@@ -96,7 +104,7 @@ impl<S: Storage> Enrol<S> {
         if expected.expires_at().is_some_and(|until| until <= now) {
             next.state = State::Expired;
             next.expires_day = None;
-            return self.save(expected, next).await;
+            return prepare_record(expected, next);
         }
         if expected.state.is_terminal() {
             return Err(Error::Transition);
@@ -227,7 +235,7 @@ impl<S: Storage> Enrol<S> {
                 next.state = State::Released;
             }
         }
-        self.save(expected, next).await
+        prepare_record(expected, next)
     }
 
     /// Ask the real rulebook what is missing, without storing gate metadata.
@@ -330,14 +338,19 @@ impl<S: Storage> Enrol<S> {
         }
     }
 
-    async fn save(&self, previous: &Record, mut next: Record) -> Result<Record> {
-        if &next != previous {
-            next.revision = next.revision.checked_add(1).ok_or(Error::InvalidInput)?;
-        }
-        next.validate()?;
+    async fn save(&self, previous: &Record, next: Record) -> Result<Record> {
+        let next = prepare_record(previous, next)?;
         self.storage.compare_exchange(Some(previous), &next).await?;
         Ok(next)
     }
+}
+
+fn prepare_record(previous: &Record, mut next: Record) -> Result<Record> {
+    if &next != previous {
+        next.revision = next.revision.checked_add(1).ok_or(Error::InvalidInput)?;
+    }
+    next.validate()?;
+    Ok(next)
 }
 
 fn validate_decision(decision: &crbk::Decision) -> Result<()> {
