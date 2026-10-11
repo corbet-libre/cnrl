@@ -2,6 +2,26 @@
 use super::*;
 
 impl Enrol<crate::LibsqlStorage> {
+    /// Read the original decoded current lifecycle inside the exact caller-owned
+    /// database/community writer. This is the same pure view as `view`: a due
+    /// pending deadline projects Expired without writing a revision or cleanup.
+    ///
+    /// This method grants no membership, role or authentication. The caller must
+    /// verify the required actual state and member binding before its sole commit.
+    /// Only success returns the writer; absent/corrupt data, a foreign writer,
+    /// storage failure or cancellation drops every previously staged change.
+    pub async fn get_in_transaction(
+        &self,
+        transaction: crlt::Transaction,
+        user: Uuid,
+        now: i64,
+    ) -> Result<(crlt::Transaction, Record)> {
+        time(now)?;
+        let (transaction, record) = self.storage.load_in_transaction(transaction, user).await?;
+        let record = self.project_view(record.ok_or(Error::NotFound)?, now)?;
+        Ok((transaction, record))
+    }
+
     /// Apply the exact original event and revision compare/exchange inside this
     /// database/community's existing writer, without beginning or committing it.
     ///

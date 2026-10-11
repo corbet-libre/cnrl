@@ -310,3 +310,81 @@ async fn dropping_after_an_actual_poll_never_commits_the_joined_writer() {
     }
     fixture.unchanged().await;
 }
+
+#[tokio::test]
+async fn decoded_current_and_expired_views_never_mutate_the_original_record() {
+    let fixture = Fixture::new().await;
+    for at in [now(), fixture.held.expires_at().unwrap()] {
+        let (tx, view) = fixture
+            .enrol
+            .get_in_transaction(
+                fixture.db.community(COMMUNITY).unwrap().tx().await.unwrap(),
+                USER,
+                at,
+            )
+            .await
+            .unwrap();
+        assert_eq!(view.revision(), fixture.held.revision());
+        assert_eq!(view.member_id(), fixture.held.member_id());
+        assert_eq!(
+            view.state(),
+            if at == now() {
+                State::HandleReserved
+            } else {
+                State::Expired
+            }
+        );
+        tx.commit().await.unwrap();
+        fixture.unchanged().await;
+    }
+}
+
+#[tokio::test]
+async fn missing_or_corrupt_read_drops_prior_staging_without_returning_evidence() {
+    let fixture = Fixture::new().await;
+    let (tx, _) = fixture.gates().await;
+    assert!(matches!(
+        fixture
+            .enrol
+            .get_in_transaction(tx, ckyh::Uuid::from_u128(99), now())
+            .await,
+        Err(Error::NotFound)
+    ));
+    fixture.unchanged().await;
+
+    let (mut tx, _) = fixture.gates().await;
+    // A real same-writer corruption of the indexed copy must fail the original
+    // decoder, and dropping the refused read must undo both participating writes.
+    tx.execute(
+        "UPDATE cnrl_enrolments SET cleanup = 1 WHERE user_id = ?1",
+        [USER.to_string()],
+    )
+    .await
+    .unwrap();
+    assert!(matches!(
+        fixture.enrol.get_in_transaction(tx, USER, now()).await,
+        Err(Error::Storage)
+    ));
+    fixture.unchanged().await;
+}
+
+#[tokio::test]
+async fn read_refuses_foreign_community_and_reopened_handle_and_drops_the_writer() {
+    let fixture = Fixture::new().await;
+    let other = common::enrol(LibsqlStorage::new(&fixture.db, "other").unwrap());
+    let (tx, _) = fixture.gates().await;
+    assert!(matches!(
+        other.get_in_transaction(tx, USER, now()).await,
+        Err(Error::Scope)
+    ));
+    fixture.unchanged().await;
+
+    let reopened = open(&fixture.path).await;
+    let other_handle = common::enrol(LibsqlStorage::new(&reopened, COMMUNITY).unwrap());
+    let (tx, _) = fixture.gates().await;
+    assert!(matches!(
+        other_handle.get_in_transaction(tx, USER, now()).await,
+        Err(Error::Scope)
+    ));
+    fixture.unchanged().await;
+}

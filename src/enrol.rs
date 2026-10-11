@@ -69,7 +69,11 @@ impl<S: Storage> Enrol<S> {
     /// expiry, cleanup or activity state. Maintenance owns durable expiration.
     pub async fn view(&self, user: Uuid, now: i64) -> Result<Record> {
         time(now)?;
-        let mut record = self.storage.load(user).await?.ok_or(Error::NotFound)?;
+        let record = self.storage.load(user).await?.ok_or(Error::NotFound)?;
+        self.project_view(record, now)
+    }
+
+    fn project_view(&self, mut record: Record, now: i64) -> Result<Record> {
         self.scope(&record)?;
         if record.expires_at().is_some_and(|until| until <= now) {
             record.state = State::Expired;

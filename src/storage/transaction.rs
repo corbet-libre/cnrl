@@ -2,6 +2,23 @@
 use super::*;
 
 impl LibsqlStorage {
+    pub(crate) async fn load_in_transaction(
+        &self,
+        mut tx: crlt::Transaction,
+        user: Uuid,
+    ) -> Result<(crlt::Transaction, Option<Record>)> {
+        if !tx.belongs_to(&self.scope) {
+            return Err(Error::Scope);
+        }
+        let record = tx
+            .query(LOAD, [user.to_string()])
+            .await?
+            .first()
+            .map(|row| self.decode(row))
+            .transpose()?;
+        Ok((tx, record))
+    }
+
     pub(crate) async fn compare_exchange_in_transaction(
         &self,
         mut tx: crlt::Transaction,
