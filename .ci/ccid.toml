@@ -2,6 +2,7 @@ schema = 1
 project = "cnrl"
 
 [checks.verify]
+cache_pure = false
 kind = "commands"
 commands = [["bash", ".ci/verify.sh"]]
 cache_tools = [["rustc", "-vV"], ["cargo", "--version"], ["node", "--version"], ["python3", "--version"], ["git", "--version"], ["rustup", "run", "nightly", "rustc", "-vV"], ["rustup", "run", "nightly", "cargo", "llvm-cov", "--version"], ["pkg-config", "--version"], ["openssl", "version"], ["clang", "--version"]]
