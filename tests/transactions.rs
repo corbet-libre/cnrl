@@ -30,7 +30,7 @@ impl Fixture {
         );
         let started = enrol.start(USER, SUBJECT, now()).await.unwrap();
         let keys = passkeys(COMMUNITY);
-        let (_, passkey) = register_passkey(&keys);
+        let (_, passkey) = register(&keys, USER);
         let keyed = enrol
             .apply(&started, Event::PasskeyRegistered(&passkey), now())
             .await
@@ -57,7 +57,7 @@ impl Fixture {
                     membership: held.state().membership(),
                 },
                 ACTION,
-                &[],
+                &Vec::<crbk::GateResult>::new(),
                 now(),
             )
             .unwrap();
