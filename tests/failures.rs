@@ -342,12 +342,14 @@ async fn current_record_contains_no_gate_data_or_activity_history() {
     );
     let gates = pending(&enrol, &register).await;
     let encoded = serde_json::to_value(&gates).unwrap();
-    let keys: Vec<_> = encoded
+    // Key order depends on the serde_json feature set of the whole graph; compare as a set.
+    let mut keys: Vec<_> = encoded
         .as_object()
         .unwrap()
         .keys()
         .map(String::as_str)
         .collect();
+    keys.sort_unstable();
     assert_eq!(
         keys,
         [
