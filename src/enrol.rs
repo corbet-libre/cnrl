@@ -208,21 +208,12 @@ impl<S: Storage> Enrol<S> {
             }
             Event::Restriction(record) => {
                 let order = record.order();
-                if order.community != next.community
-                    || order.subject != next.subject
-                    || !order.scope.covers(&self.config.membership_action)
-                {
+                if order.community != next.community || order.subject != next.subject {
                     return Err(Error::Scope);
                 }
-                if !order.period.contains(now) {
-                    return Err(Error::InvalidInput);
-                }
-                if order.period.ends_at.is_none() {
-                    next.state = State::Released;
-                    next.expires_day = None;
-                } else if next.state == State::Admitted {
-                    next.state = State::Lapsed;
-                }
+                // Every block is permanent: the enrolment is released for good.
+                next.state = State::Released;
+                next.expires_day = None;
             }
             Event::AllPasskeysLost => {
                 next.state = State::Released;
