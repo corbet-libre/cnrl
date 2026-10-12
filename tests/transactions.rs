@@ -30,7 +30,7 @@ impl Fixture {
         );
         let started = enrol.start(USER, SUBJECT, now()).await.unwrap();
         let keys = passkeys(COMMUNITY);
-        let (_, passkey) = register(&keys, USER);
+        let (_, passkey) = common::register(&keys, USER);
         let keyed = enrol
             .apply(&started, Event::PasskeyRegistered(&passkey), now())
             .await
