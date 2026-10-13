@@ -338,7 +338,7 @@ dependencies = [
 [[package]]
 name = "ckyh"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/ckyh?branch=main#e33e6d73f0a821b21f09cd619e562ac824745416"
+source = "git+https://git.corbet.ch/corbet-foss/ckyh?branch=main#223b31a80543986a1b56dae1c9122bd7c785df00"
 dependencies = [
  "ciborium",
  "crlt",
@@ -479,7 +479,7 @@ dependencies = [
 [[package]]
 name = "crbk"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/crbk?branch=main#d3431a1bcf8f440be3f3ee0def7588ced2f752db"
+source = "git+https://git.corbet.ch/corbet-foss/crbk?branch=main#c3701ed4f9976ef13ea4039f8d298cfd1d294965"
 dependencies = [
  "crlt",
  "semver",
@@ -557,7 +557,7 @@ dependencies = [
 [[package]]
 name = "csgn"
 version = "0.0.0"
-source = "git+https://git.corbet.ch/corbet-foss/csgn?branch=main#427b82cdbce26e7226fb444caf4b6c505d691c0f"
+source = "git+https://git.corbet.ch/corbet-foss/csgn?branch=main#516b1d4102bc89601a8070c821b730e834911014"
 dependencies = [
  "ciborium-ll",
  "coset 0.4.2",
