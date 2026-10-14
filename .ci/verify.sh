@@ -11,6 +11,7 @@ python3 .github/check-first-party.py
 python3 .github/test-source-coverage.py
 node --test .github/test-auto-merge.mjs
 rustc --version
+bash .ci/update-our-crates.sh
 cargo fmt --all --check
 node --test .github/check-pins.test.mjs
 cargo metadata --locked --format-version 1 > dependency-metadata.json
