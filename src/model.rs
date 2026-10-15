@@ -36,7 +36,8 @@ impl Config {
 pub enum State {
     /// Registration has started with a fixed coarse deadline.
     Started,
-    /// ckyh has durably registered a live passkey.
+    /// A live credential is durably registered: a ckyh passkey or, in the one-confirmation
+    /// model, the member's first ACTIVE device key.
     PasskeyRegistered,
     /// crgs has reserved a handle until the pending deadline.
     HandleReserved,
@@ -197,6 +198,15 @@ impl Record {
 pub enum Event<'a> {
     /// Successful ckyh registration; a revoked record is refused.
     PasskeyRegistered(&'a ckyh::StoredPasskey),
+    /// The member's first device key is bound ACTIVE in this community's device registry
+    /// (one-confirmation model: join by passport plus confirmation stamp, no passkey). Moves
+    /// `Started` to `PasskeyRegistered`, the state of a registered live credential.
+    DeviceKeyBound {
+        /// Community of the registry entry.
+        community: &'a str,
+        /// Member of the registry entry.
+        member: Uuid,
+    },
     /// Successful crgs reservation, with exactly this enrolment's deadline.
     HandleReserved(&'a crgs::Reservation),
     /// Enter the headless lobby; safe to repeat.

@@ -125,6 +125,14 @@ impl<S: Storage> Enrol<S> {
                     next.state = State::PasskeyRegistered;
                 }
             }
+            Event::DeviceKeyBound { community, member } => {
+                if community != expected.community || member != expected.user {
+                    return Err(Error::Scope);
+                }
+                if next.state == State::Started {
+                    next.state = State::PasskeyRegistered;
+                }
+            }
             Event::HandleReserved(reservation) => {
                 if reservation.member_id != expected.member_id() {
                     return Err(Error::Scope);

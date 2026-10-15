@@ -620,3 +620,29 @@ async fn actual_register_months_are_inclusive_until_the_next_calendar_month() {
         assert_eq!(row.state(), State::Admitted);
     }
 }
+
+#[tokio::test]
+async fn a_bound_device_key_registers_the_credential_only_for_its_own_member() {
+    let enrol = enrol(MemoryStorage::new(COMMUNITY).unwrap());
+    let started = enrol.start(USER, SUBJECT, now()).await.unwrap();
+    for (community, member) in [("community-b", USER), (COMMUNITY, Uuid::from_u128(2))] {
+        assert_eq!(
+            enrol
+                .apply(&started, Event::DeviceKeyBound { community, member }, now())
+                .await,
+            Err(Error::Scope)
+        );
+    }
+    let bound = Event::DeviceKeyBound {
+        community: COMMUNITY,
+        member: USER,
+    };
+    let keyed = enrol.apply(&started, bound, now()).await.unwrap();
+    assert_eq!(keyed.state(), State::PasskeyRegistered);
+    // Repeating is harmless; a later state is kept.
+    let again = Event::DeviceKeyBound {
+        community: COMMUNITY,
+        member: USER,
+    };
+    assert_eq!(enrol.apply(&keyed, again, now()).await.unwrap(), keyed);
+}
