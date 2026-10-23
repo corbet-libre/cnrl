@@ -76,8 +76,8 @@ there is no claim of cross-crate atomic admission. See the contract for details.
 ## Verification
 
 CI runs stable Rust `cargo fmt --all --check`,
-`cargo clippy --all-targets -- -D warnings`, and `cargo test`. Compilation and tests never run
-on the workstation. Tests use actual storage, libSQL files, WebAuthn ceremonies,
+`cargo clippy --all-targets -- -D warnings`, and `cargo test`. Compilation and tests run in CI.
+Tests use actual storage, libSQL files, WebAuthn ceremonies,
 rulebook decisions and signed clbs records. The resolved dependency lockfile is
 retained as a CI artifact and committed after resolution on CI.
 
