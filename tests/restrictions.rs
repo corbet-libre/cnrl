@@ -39,6 +39,7 @@ fn order(id: &str, kind: OrderKind) -> SignedOrder {
         reference: "test-reference".into(),
         entered_by: entered_by.into(),
         kind,
+        scope: clbs::Scope::Member,
     };
     let proof = SigningKey::from_bytes(&[7; 32])
         .sign(&order.signing_payload().unwrap())
