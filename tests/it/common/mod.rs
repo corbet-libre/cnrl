@@ -3,7 +3,8 @@
 use ckyh::{StoredPasskey, Uuid};
 use cnrl::{Config, Enrol, Record, Storage};
 use std::sync::LazyLock;
-use webauthn_authenticator_rs::{AuthenticatorBackend, softtoken::SoftToken};
+pub mod softtoken;
+pub use softtoken::SoftwareToken;
 
 pub const USER: Uuid = Uuid::from_u128(1);
 pub const COMMUNITY: &str = "community-a";
@@ -167,15 +168,15 @@ pub fn passkeys(community: &str) -> PasskeyFixture {
     })
 }
 
-pub fn register(server: &PasskeyFixture, user: Uuid) -> (SoftToken, StoredPasskey) {
+pub fn register(server: &PasskeyFixture, user: Uuid) -> (SoftwareToken, StoredPasskey) {
     server.with(|server| {
-        let mut token = SoftToken::new(true).unwrap().0;
+        let mut token = SoftwareToken::new(true).unwrap().0;
         let (challenge, pending) = server.start_registration(user).unwrap();
         let response = token
             .perform_register(
                 ckyh::Url::parse(ORIGIN).unwrap(),
                 {
-                    // SoftToken is a legacy non-resident fixture.
+                    // SoftwareToken is a legacy non-resident fixture.
                     let mut options = challenge.public_key;
                     options
                         .authenticator_selection
@@ -198,7 +199,7 @@ pub fn register(server: &PasskeyFixture, user: Uuid) -> (SoftToken, StoredPasske
     })
 }
 
-pub fn login(server: &PasskeyFixture, token: &mut SoftToken) -> ckyh::Authentication {
+pub fn login(server: &PasskeyFixture, token: &mut SoftwareToken) -> ckyh::Authentication {
     server.with(|server| {
         let (challenge, pending) = server.start_authentication(USER).unwrap();
         let response = token

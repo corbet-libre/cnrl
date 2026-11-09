@@ -216,12 +216,7 @@ async fn lifecycle<S: Storage, R: crgs::Storage>(store: S, register: crgs::Regis
     );
 }
 
-fn register_passkey(
-    server: &PasskeyFixture,
-) -> (
-    webauthn_authenticator_rs::softtoken::SoftToken,
-    ckyh::StoredPasskey,
-) {
+fn register_passkey(server: &PasskeyFixture) -> (common::SoftwareToken, ckyh::StoredPasskey) {
     common::register(server, USER)
 }
 
