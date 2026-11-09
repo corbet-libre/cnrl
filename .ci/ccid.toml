@@ -30,3 +30,5 @@ events = ["pull_request"]
 checks = ["verify", "advisories"]
 workflow = "pr"
 command = ["bash", ".ci/run-cached.sh"]
+
+[check_shell]
