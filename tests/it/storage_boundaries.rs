@@ -1,8 +1,7 @@
 //! Boundary cases at the actual storage and sibling receipt interfaces.
-mod common;
 
+use crate::common::*;
 use cnrl::{Error, Event, LibsqlStorage, MemoryStorage, Record, Storage};
-use common::*;
 use serde_json::{Value, json};
 
 fn change(record: &Record, changes: Value) -> Record {

@@ -1,9 +1,9 @@
 //! Failure, replay, isolation and persistence checks against real storage.
-mod common;
 
+use crate::common;
+use crate::common::*;
 use ckyh::Uuid;
 use cnrl::{Config, Error, Event, LibsqlStorage, MemoryStorage, State, Storage};
-use common::*;
 
 #[tokio::test]
 async fn reject_invalid_inputs_and_identity_rebinding() {

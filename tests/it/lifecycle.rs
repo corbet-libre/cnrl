@@ -1,9 +1,9 @@
 //! Real lifecycle round trips through sibling crates and both storage backends.
-mod common;
 
+use crate::common;
+use crate::common::*;
 use ckyh::Uuid;
 use cnrl::{Enrol, Error, Event, LibsqlStorage, MemoryStorage, State, Storage};
-use common::*;
 
 async fn lifecycle<S: Storage, R: crgs::Storage>(store: S, register: crgs::Register<R>) {
     let enrol = enrol(store);

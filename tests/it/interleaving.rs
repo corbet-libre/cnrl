@@ -1,9 +1,8 @@
 //! Controlled scheduling over real stores; every result comes from its owner.
-mod common;
 
+use crate::common::*;
 use ckyh::Uuid;
 use cnrl::{Error, Event, LibsqlStorage, Record, Result, Storage};
-use common::*;
 use std::sync::Arc;
 use tokio::sync::Barrier;
 

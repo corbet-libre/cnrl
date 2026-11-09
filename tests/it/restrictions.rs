@@ -1,9 +1,9 @@
 //! Verified clbs restrictions, literal scope and resumable release cleanup.
-mod common;
 
+use crate::common;
+use crate::common::*;
 use clbs::{Order, OrderKind, SignedOrder};
 use cnrl::{Error, Event, LibsqlStorage, State};
-use common::*;
 use ed25519_dalek::{Signature, Signer, SigningKey};
 
 // Authentic signed fixtures at clbs's external authority boundary.

@@ -1,9 +1,9 @@
 //! Trusted lifecycle storage composition; this does not qualify production
 //! admission, voucher signatures or configured external gates.
-mod common;
 
+use crate::common;
+use crate::common::*;
 use cnrl::{Enrol, Error, Event, LibsqlStorage, Record, State, Storage};
-use common::*;
 use std::future::Future;
 
 struct Fixture {
