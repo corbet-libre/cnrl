@@ -7,7 +7,7 @@ import tomllib
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-FIRST_PARTY = re.compile(r"^(?:git\+)?https://git\.corbet\.ch/(?:corbet-(?:foss|fsl|libre|libs)|cmtymt|cmtymeet)/")
+FIRST_PARTY = re.compile(r"^(?:git\+)?https://git\.corbet\.ch/(?:corbet-(?:libre|fsl)|cmtymt|cmtymeet)/")
 SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
