@@ -46,7 +46,7 @@ def rejects(function, value):
 
 
 def self_test():
-    repo = 'https://git.corbet.ch/corbet-foss/example'
+    repo = 'https://git.corbet.ch/corbet-libre/example'
     source = 'git+' + repo + '?branch=main#' + 'a' * 40
     package = {'name': 'example', 'source': source}
     check_lock([package])
