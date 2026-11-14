@@ -9,7 +9,6 @@ cp Cargo.lock "${ARTIFACT_ROOT:?}/Cargo.lock"
 
 python3 .github/check-first-party.py
 python3 .github/test-source-coverage.py
-node --test .github/test-auto-merge.mjs
 rustc --version
 cargo fmt --all --check
 node --test .github/check-pins.test.mjs

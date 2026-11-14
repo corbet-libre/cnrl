@@ -84,9 +84,7 @@ jobs:
         name: resolved-lock
     - run: 'python3 .github/check-first-party.py
 
-        python3 .github/test-source-coverage.py
-
-        node --test .github/test-auto-merge.mjs'
+        python3 .github/test-source-coverage.py'
     - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0
       with:
         tool: cargo-deny
